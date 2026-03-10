@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brief Creation – Finn Analysis Inline Redesign</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f4f4f5; color: #373b3f; font-size: 16px; line-height: 1.25; }
+
+    /* ── TOP NAV ─────────────────────────────────────────── */
+    .top-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: #fff; height: 64px;
+      box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.15);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 24px;
+    }
+    .nav-left { display: flex; align-items: center; gap: 8px; color: #373b3f; font-size: 14px; }
+    .spinner { width: 20px; height: 20px; border: 2px solid #d2d3d5; border-top-color: #212529; border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .nav-right { display: flex; align-items: center; gap: 8px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: 8px; font-family: inherit; font-size: 16px; font-weight: 600; cursor: pointer; border: none; transition: opacity .15s; }
+    .btn:hover { opacity: .85; }
+    .btn-outline { background: #fff; border: 1.5px solid #212529; color: #212529; }
+    .btn-ghost { background: transparent; color: #212529; border: none; }
+    .btn-dark { background: #212529; color: #fff; }
+    .btn-icon { background: #f4f4f5; color: #212529; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 18px; line-height: 1; }
+    .btn-sm { padding: 8px 14px; font-size: 14px; font-weight: 600; }
+
+    /* ── LAYOUT ──────────────────────────────────────────── */
+    .layout { display: flex; padding-top: 64px; min-height: 100vh; }
+    .sidebar { width: 280px; flex-shrink: 0; padding: 40px 24px; position: sticky; top: 64px; height: calc(100vh - 64px); overflow-y: auto; }
+    .sidebar-title { font-size: 28px; font-weight: 700; color: #212529; letter-spacing: -.5px; line-height: 1.2; margin-bottom: 36px; }
+    .main { flex: 1; padding: 32px 40px 80px 32px; max-width: 800px; }
+
+    /* ── STEPPER ─────────────────────────────────────────── */
+    .steps { display: flex; flex-direction: column; }
+    .step { display: flex; flex-direction: column; cursor: pointer; }
+    .step-row { display: flex; align-items: center; gap: 10px; padding: 2px 0; }
+    .step-icon { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #d2d3d5; background: #fff; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #212529; transition: all .2s; }
+    .step-icon.done { background: #212529; border-color: #212529; color: #fff; }
+    .step-icon.active { background: #fff; border-color: #212529; }
+    .step-icon.active::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #212529; }
+    .step-label { font-size: 15px; font-weight: 600; color: #212529; }
+    .step-label.muted { color: #8f9295; font-weight: 400; }
+    .step-connector { width: 1px; height: 20px; background: #d2d3d5; margin-left: 13px; }
+    .step-connector.done { background: #212529; }
+    .badge { display: inline-flex; align-items: center; background: #373b3f; color: #fff; font-size: 11px; font-weight: 400; padding: 1px 7px; border-radius: 6px; }
+
+    /* ── CARDS ───────────────────────────────────────────── */
+    .card { background: #fff; border: 1px solid #d2d3d5; border-radius: 8px; padding: 24px; margin-bottom: 16px; }
+    .card-title { font-size: 20px; font-weight: 700; color: #212529; margin-bottom: 6px; }
+    .field-label { font-size: 14px; font-weight: 600; color: #373b3f; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+    .required { color: #dc3545; }
+    .input { width: 100%; padding: 10px 14px; border: 1.5px solid #d2d3d5; border-radius: 8px; font-family: inherit; font-size: 15px; color: #373b3f; background: #fff; outline: none; transition: border-color .15s, box-shadow .3s; }
+    .input:focus { border-color: #212529; }
+    .input::placeholder { color: #8f9295; }
+    .textarea { width: 100%; padding: 10px 14px; border: 1.5px solid #d2d3d5; border-radius: 8px; font-family: inherit; font-size: 15px; color: #373b3f; background: #fff; resize: vertical; min-height: 80px; outline: none; transition: border-color .15s, box-shadow .3s; }
+    .textarea:focus { border-color: #212529; }
+
+    /* ── FIELD HIGHLIGHT ANIMATION ───────────────────────── */
+    @keyframes fieldApplied {
+      0%   { box-shadow: 0 0 0 3px rgba(40,167,69,.5); border-color: #28a745; background: #f0fff4; }
+      60%  { box-shadow: 0 0 0 3px rgba(40,167,69,.2); border-color: #28a745; background: #f0fff4; }
+      100% { box-shadow: none; border-color: #d2d3d5; background: #fff; }
+    }
+    .field-applied { animation: fieldApplied 1.8s ease forwards !important; }
+    @keyframes tagPop {
+      0%   { transform: scale(.7); opacity: 0; }
+      60%  { transform: scale(1.1); }
+      100% { transform: scale(1);  opacity: 1; }
+    }
+    .tag-new { animation: tagPop .35s ease forwards; }
+    @keyframes sectionSlideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .slide-in { animation: sectionSlideIn .3s ease forwards; }
+
+    /* ── RADIO CARDS ─────────────────────────────────────── */
+    .radio-cards { display: flex; gap: 12px; margin-bottom: 16px; }
+    .radio-card { flex: 1; border: 2px solid #d2d3d5; border-radius: 8px; padding: 14px 12px; cursor: pointer; transition: all .15s; display: flex; flex-direction: column; gap: 4px; }
+    .radio-card.selected { border-color: #212529; background: #f4f4f5; }
+    .radio-card .rc-label { font-size: 14px; font-weight: 600; color: #212529; }
+    .radio-card .rc-desc  { font-size: 13px; color: #8f9295; line-height: 1.4; }
+
+    /* ── PLATFORMS ───────────────────────────────────────── */
+    .platforms { display: flex; gap: 8px; margin-bottom: 20px; }
+    .platform-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 8px; border: 1.5px solid #d2d3d5; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; color: #212529; background: #fff; transition: all .15s; }
+    .platform-btn.active { border-color: #212529; background: #f4f4f5; }
+    .platform-btn svg { width: 28px; height: 28px; }
+
+    /* ── COUNTERS ────────────────────────────────────────── */
+    .counter-group { display: flex; gap: 24px; margin-bottom: 16px; }
+    .counter { display: flex; flex-direction: column; gap: 6px; }
+    .counter label { font-size: 14px; font-weight: 600; color: #212529; }
+    .counter-input { display: flex; align-items: center; gap: 4px; }
+    .counter-btn { width: 34px; height: 34px; border-radius: 8px; background: #f4f4f5; border: none; cursor: pointer; font-size: 18px; color: #212529; display: flex; align-items: center; justify-content: center; }
+    .counter-val { width: 60px; text-align: center; padding: 6px 8px; border: 1.5px solid #d2d3d5; border-radius: 8px; font-size: 15px; font-weight: 600; color: #212529; }
+
+    /* ── TOGGLE ──────────────────────────────────────────── */
+    .toggle-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+    .toggle input { display: none; }
+    .toggle-track { position: absolute; inset: 0; border-radius: 11px; background: #d2d3d5; transition: background .2s; cursor: pointer; }
+    .toggle input:checked + .toggle-track { background: #212529; }
+    .toggle-thumb { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.25); transition: transform .2s; pointer-events: none; }
+    .toggle input:checked ~ .toggle-thumb { transform: translateX(18px); }
+    .toggle-label { font-size: 15px; font-weight: 600; color: #373b3f; }
+
+    /* ── TIMELINE ────────────────────────────────────────── */
+    .timeline { display: flex; align-items: flex-start; gap: 0; margin-bottom: 24px; flex-wrap: wrap; }
+    .tl-item { display: flex; flex-direction: column; gap: 2px; min-width: 90px; }
+    .tl-item .tl-name { font-size: 13px; font-weight: 700; color: #373b3f; }
+    .tl-item .tl-week { font-size: 12px; color: #8f9295; }
+    .tl-sep { width: 32px; height: 1px; background: #d2d3d5; margin-top: 10px; flex-shrink: 0; }
+
+    /* ── MISC ────────────────────────────────────────────── */
+    .date-row { display: flex; flex-direction: column; gap: 6px; max-width: 260px; }
+    .date-group { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
+    .seg-btn-group { display: flex; margin-bottom: 20px; }
+    .seg-btn { padding: 10px 20px; font-family: inherit; font-size: 15px; font-weight: 600; border: 1.5px solid #212529; cursor: pointer; transition: all .15s; }
+    .seg-btn:first-child { border-radius: 8px 0 0 8px; }
+    .seg-btn:last-child { border-radius: 0 8px 8px 0; border-left: none; }
+    .seg-btn.active { background: #212529; color: #fff; }
+    .seg-btn:not(.active) { background: #fff; color: #212529; }
+    .section-sep { height: 1px; background: #d2d3d5; margin: 8px 0 20px; }
+    .helper-text { font-size: 13px; color: #8f9295; margin-bottom: 14px; }
+    .tag-input { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; border: 1.5px solid #d2d3d5; border-radius: 8px; padding: 8px 12px; background: #fff; cursor: text; transition: box-shadow .3s; }
+    .tag { background: #e9eafa; color: #4a4ea2; padding: 3px 10px; border-radius: 12px; font-size: 13px; font-weight: 600; }
+    .tag-finn { background: #eafaf1; color: #1a7a40; border: 1px solid #b2dfb2; }
+    .concept-bar { background: #e9eafa; color: #4a4ea2; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+    .radio-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 14px; }
+    .radio-row input { accent-color: #212529; }
+    .alert-info { background: #e6eeff; border: 1px solid #0d6efd; color: #063272; padding: 12px 14px; border-radius: 8px; font-size: 14px; line-height: 1.5; margin-bottom: 16px; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .step-footer { display: flex; justify-content: space-between; align-items: center; padding: 20px 0 0; }
+
+    /* ── FINN PANEL ──────────────────────────────────────── */
+    .finn-panel {
+      border: 1.5px solid #d2d3d5; border-radius: 10px;
+      background: #fff; overflow: hidden; margin-top: 8px;
+      transition: border-color .4s;
+    }
+    .finn-panel.finn-clear { border-color: #28a745; }
+
+    .finn-panel-header {
+      padding: 16px 20px; display: flex; align-items: center;
+      justify-content: space-between; gap: 12px;
+    }
+    .finn-panel-title { display: flex; align-items: center; gap: 10px; }
+    .finn-avatar { width: 32px; height: 32px; border-radius: 50%; background: #212529; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .finn-avatar svg { width: 18px; height: 18px; }
+    .finn-heading { font-size: 15px; font-weight: 700; color: #212529; display: flex; align-items: center; gap: 6px; }
+    .finn-subtext { font-size: 13px; color: #8f9295; margin-top: 2px; }
+
+    .finn-run-btn {
+      display: flex; align-items: center; gap: 6px; padding: 8px 16px;
+      background: #212529; color: #fff; border: none; border-radius: 8px;
+      font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+      white-space: nowrap; flex-shrink: 0; transition: opacity .15s;
+    }
+    .finn-run-btn:hover { opacity: .85; }
+    .finn-run-btn:disabled { opacity: .5; cursor: default; }
+    .finn-run-btn.reanalyze { background: #fff; color: #212529; border: 1.5px solid #212529; }
+    .finn-run-btn.reanalyze:hover { background: #f4f4f5; }
+
+    /* Results area */
+    .finn-results { border-top: 1px solid #e8e9ea; padding: 0 20px 16px; display: none; position: relative; }
+    .finn-results.visible { display: block; }
+    .finn-ts { font-size: 12px; color: #8f9295; padding: 12px 0 10px; }
+
+    /* Scan overlay for re-analyze */
+    .finn-scan-overlay {
+      position: absolute; inset: 0;
+      background: rgba(255,255,255,.92);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 10px; z-index: 10; border-radius: 0 0 8px 8px;
+      animation: fadeIn .2s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+    .finn-scan-overlay .scan-spinner {
+      width: 28px; height: 28px; border: 2.5px solid #d2d3d5;
+      border-top-color: #212529; border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    .finn-scan-overlay span { font-size: 14px; font-weight: 600; color: #212529; }
+
+    /* Suggestion item */
+    .finn-suggestion {
+      border: 1px solid #e8e9ea; border-radius: 8px;
+      padding: 12px 14px; margin-bottom: 10px; background: #fff;
+      transition: all .3s;
+    }
+    .finn-suggestion:last-child { margin-bottom: 0; }
+    .finn-sug-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .warn-icon { font-size: 14px; color: #fd7e14; flex-shrink: 0; line-height: 1; }
+    .finn-sug-field { font-size: 13px; font-weight: 700; color: #373b3f; }
+    .finn-sug-body { font-size: 13px; color: #373b3f; line-height: 1.55; padding-left: 22px; }
+    .finn-sug-actions { display: flex; gap: 8px; margin-top: 10px; padding-left: 22px; }
+    .sug-apply {
+      display: flex; align-items: center; gap: 5px;
+      padding: 5px 12px; background: #212529; color: #fff; border: none;
+      border-radius: 6px; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    .sug-apply:hover { opacity: .85; }
+    .sug-dismiss { padding: 5px 12px; background: transparent; color: #8f9295; border: 1px solid #d2d3d5; border-radius: 6px; font-family: inherit; font-size: 12px; cursor: pointer; }
+    .sug-dismiss:hover { border-color: #8f9295; }
+
+    /* Resolved state */
+    .finn-suggestion.resolved { background: #f4fef6; border-color: #b2dfb2; }
+    .finn-suggestion.resolved .warn-icon { color: #28a745; }
+    .finn-applied-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #eafaf1; color: #1a7a40; border: 1px solid #b2dfb2;
+      font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+      margin-left: 8px;
+    }
+
+    /* All-clear state */
+    .finn-allclear {
+      display: none; padding: 16px 20px;
+      border-top: 1px solid #e8e9ea;
+      align-items: center; gap: 12px;
+    }
+    .finn-allclear.visible { display: flex; }
+    .finn-allclear-icon { font-size: 24px; }
+    .finn-allclear-text { font-size: 14px; font-weight: 600; color: #1a7a40; }
+    .finn-allclear-sub { font-size: 13px; color: #8f9295; margin-top: 2px; }
+
+    /* Success launch page */
+    .success-page { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 16px; text-align: center; }
+    .success-icon { font-size: 64px; }
+    .success-title { font-size: 28px; font-weight: 700; color: #212529; }
+    .success-sub { font-size: 16px; color: #8f9295; max-width: 400px; }
+
+    /* Questions block (Targeting step) */
+    .questions-block { margin-top: 16px; display: none; }
+    .questions-block.visible { display: block; }
+    .q-item { border: 1px solid #d2d3d5; border-radius: 8px; padding: 14px; margin-bottom: 10px; background: #fff; }
+    .q-item label { font-size: 13px; font-weight: 700; color: #212529; display: block; margin-bottom: 8px; }
+    .q-option { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 6px; }
+    .q-option input { accent-color: #212529; }
+  </style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="top-nav">
+  <div class="nav-left">
+    <div class="spinner"></div>
+    Saving…
+  </div>
+  <div class="nav-right">
+    <button class="btn btn-outline btn-sm" onclick="prevStep()">← Previous</button>
+    <button id="next-btn" class="btn btn-dark btn-sm" onclick="nextStep()">Continue →</button>
+    <button class="btn-icon" title="Close">✕</button>
+  </div>
+</nav>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-title">Influencer Partnership Brief</div>
+    <div class="steps" id="steps-nav"></div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- ══ STEP 1: Products for Brief ══════════════════════ -->
+    <div class="page active" id="page-0">
+      <div class="card">
+        <div class="card-title">Brief name <span class="required">*</span></div>
+        <div style="margin-top:12px">
+          <input class="input" type="text" placeholder="Enter your brief name" />
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">How will the Creator receive the product(s)?</div>
+        <div class="radio-cards" style="margin-top:14px">
+          <div class="radio-card selected" onclick="selectCard(this)">
+            <div class="rc-label">📦 Product(s) will be shipped</div>
+            <div class="rc-desc">Use this option if sending products to the Creator via your warehouse.</div>
+          </div>
+          <div class="radio-card" onclick="selectCard(this)">
+            <div class="rc-label">🛒 Creator will purchase directly</div>
+            <div class="rc-desc">Use this option if you want Creator to buy your product at a specific store or website.</div>
+          </div>
+        </div>
+        <div style="background:#f9f9f9;border:1px solid #e0e0e0;border-radius:8px;padding:16px;margin-top:4px">
+          <div class="field-label">Choose shipping method <span class="required">*</span></div>
+          <div class="radio-row"><input type="radio" name="ship" checked /> Shopify integration</div>
+          <div class="radio-row"><input type="radio" name="ship" /> Add products manually</div>
+          <div class="helper-text" style="margin-top:6px">With Cohley's Shopify integration, we'll automate creator product shipping and tracking.</div>
+          <button class="btn btn-outline btn-sm" style="margin-top:8px">+ Add product</button>
+        </div>
+      </div>
+
+      <div class="card" id="card-product-usage">
+        <div class="card-title">Explain how to use the product(s). <span style="color:#8f9295;font-weight:400;font-size:16px">— Optional</span></div>
+        <div class="helper-text" style="margin-top:8px">Provide key details such as usage instructions, unique features, and correct pronunciation.</div>
+        <textarea class="textarea" id="product-usage-textarea" placeholder="Add written details, audio, or imagery." rows="4"></textarea>
+      </div>
+
+      <!-- FINN — Products for Brief -->
+      <div class="finn-panel" id="finn-0">
+        <div class="finn-panel-header">
+          <div class="finn-panel-title">
+            <div class="finn-avatar">
+              <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="3.5" stroke="#fff" stroke-width="1.6"/><path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </div>
+            <div>
+              <div class="finn-heading">Finn Analysis <span class="badge">Beta</span></div>
+              <div class="finn-subtext">AI review · Products for Brief</div>
+            </div>
+          </div>
+          <button class="finn-run-btn" id="finn-run-0" onclick="runFinn(0)">
+            ✦ Analyze with Finn
+          </button>
+        </div>
+        <div class="finn-results" id="finn-results-0">
+          <div class="finn-ts" id="finn-ts-0">Last analysis run: just now</div>
+          <div class="finn-suggestion" id="finn-0-s0">
+            <div class="finn-sug-header">
+              <span class="warn-icon">⚠</span>
+              <span class="finn-sug-field">Explain how to use the product(s)</span>
+            </div>
+            <div class="finn-sug-body">Creators are receiving 5 products but no instructions are provided on how to best use them together. Adding usage guidance will improve content quality significantly.</div>
+            <div class="finn-sug-actions">
+              <button class="sug-apply" onclick="applySuggestion('finn-0-s0')">✦ Apply suggestion</button>
+              <button class="sug-dismiss" onclick="dismissSuggestion('finn-0-s0')">Dismiss</button>
+            </div>
+          </div>
+        </div>
+        <div class="finn-allclear" id="finn-allclear-0">
+          <div class="finn-allclear-icon">✅</div>
+          <div>
+            <div class="finn-allclear-text">No issues found on this section</div>
+            <div class="finn-allclear-sub">Your Products for Brief section looks great!</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-footer">
+        <span></span>
+        <button class="btn btn-dark" onclick="nextStep()">Continue →</button>
+      </div>
+    </div><!-- /page-0 -->
+
+    <!-- ══ STEP 2: Deliverables ════════════════════════════ -->
+    <div class="page" id="page-1">
+      <div class="card">
+        <div class="card-title">Platform Selection <span class="required">*</span></div>
+        <div class="platforms" style="margin-top:14px">
+          <button class="platform-btn active" onclick="selPlatform(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="1.8"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="#e1306c" stroke="none"/></svg>
+            Instagram
+          </button>
+          <button class="platform-btn" onclick="selPlatform(this)">
+            <svg viewBox="0 0 24 24" fill="#1877f2"><path d="M24 12.07C24 5.41 18.63 0 12 0S0 5.41 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.04V9.41c0-3.02 1.8-4.7 4.54-4.7 1.31 0 2.69.24 2.69.24v2.97h-1.52c-1.49 0-1.96.93-1.96 1.89v2.26h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07z"/></svg>
+            Facebook
+          </button>
+          <button class="platform-btn" onclick="selPlatform(this)">
+            <svg viewBox="0 0 24 24" fill="#000"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V9.05a8.27 8.27 0 004.84 1.55V7.15a4.85 4.85 0 01-1.07-.46z"/></svg>
+            TikTok
+          </button>
+          <button class="platform-btn" onclick="selPlatform(this)">
+            <svg viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 00-2.12-2.14C19.55 3.5 12 3.5 12 3.5s-7.55 0-9.38.55A3.02 3.02 0 00.5 6.19C0 8.03 0 12 0 12s0 3.97.5 5.81A3.02 3.02 0 002.62 19.96C4.45 20.5 12 20.5 12 20.5s7.55 0 9.38-.54a3.02 3.02 0 002.12-2.15C24 15.97 24 12 24 12s0-3.97-.5-5.81zM9.75 15.5V8.5l6.25 3.5-6.25 3.5z"/></svg>
+            YouTube
+          </button>
+          <button class="platform-btn" onclick="selPlatform(this)">
+            <svg viewBox="0 0 24 24" stroke="#8f9295" stroke-width="1.5" fill="none"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10" stroke-linecap="round"/></svg>
+            Other
+          </button>
+        </div>
+
+        <div class="toggle-row">
+          <label class="toggle"><input type="checkbox"/><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-label" style="font-weight:400;font-size:14px">Ask creators permission to boost content via spark code or brand partnership?</span>
+        </div>
+
+        <div class="section-sep"></div>
+        <div class="field-label">Deliverables <span class="required">*</span></div>
+        <div class="helper-text">Each Creator will post the same number of content for each concept they choose.</div>
+        <div class="counter-group">
+          <div class="counter"><label>Reel</label><div class="counter-input"><button class="counter-btn" onclick="counter(this,-1)">−</button><input class="counter-val" type="number" value="0" min="0" /><button class="counter-btn" onclick="counter(this,1)">+</button></div></div>
+          <div class="counter"><label>Post</label><div class="counter-input"><button class="counter-btn" onclick="counter(this,-1)">−</button><input class="counter-val" type="number" value="0" min="0" /><button class="counter-btn" onclick="counter(this,1)">+</button></div></div>
+          <div class="counter"><label>Story</label><div class="counter-input"><button class="counter-btn" onclick="counter(this,-1)">−</button><input class="counter-val" type="number" value="0" min="0" /><button class="counter-btn" onclick="counter(this,1)">+</button></div></div>
+        </div>
+
+        <div class="field-label">Concepts <span class="required">*</span></div>
+        <div style="background:#f9f9f9;border:1px solid #e0e0e0;border-radius:8px;padding:16px;margin-bottom:8px">
+          <div class="concept-bar">Concept 1 <span style="font-weight:400;font-size:12px;color:#8f9295">▲</span></div>
+          <div style="margin-bottom:12px">
+            <div class="field-label">Concept title <span class="required">*</span></div>
+            <input class="input" type="text" placeholder="Add title" />
+          </div>
+          <div class="field-label">Concept description <span class="required">*</span></div>
+          <textarea class="textarea" placeholder="i.e. Show us how you create a range of looks depending on your mood…"></textarea>
+        </div>
+        <button class="btn btn-outline btn-sm">+ Add Concept</button>
+      </div>
+
+      <div class="card">
+        <div class="field-label">#Hashtags</div>
+        <div class="helper-text">What hashtags would you like the creator to include in their social post?</div>
+        <div class="tag-input" id="hashtag-tag-input">
+          <span class="tag">#skincare</span>
+          <input id="hashtag-text-input" type="text" style="border:none;outline:none;font-size:14px;flex:1;min-width:80px" placeholder="Add hashtag…" />
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="field-label">@Mentions</div>
+        <div class="helper-text">What account should the creator tag in their post?</div>
+        <input class="input" id="mentions-input" type="text" placeholder="@brandname" />
+      </div>
+
+      <div class="card">
+        <div class="field-label">Caption</div>
+        <div class="helper-text">Have direction for the creators to include in their caption?</div>
+        <textarea class="textarea" placeholder="Add caption guidance here…"></textarea>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Create your style guide <span class="required">*</span></div>
+        <div class="helper-text" style="margin-top:8px">Provide an example asset by uploading from your device or adding a URL.</div>
+        <div style="border:2px dashed #d2d3d5;border-radius:8px;padding:36px 24px;text-align:center;color:#8f9295;font-size:14px;">
+          🖼 Drag and drop example image or video or <span style="color:#0d6efd;cursor:pointer">click to browse</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Content non-negotiables <span class="required">*</span></div>
+        <div class="alert-info" style="margin-top:12px">List essential guidelines here. Finn will check each submitted asset for compliance upon Creator upload.</div>
+        <div class="helper-text">Press <strong>Enter</strong> to add each item.</div>
+        <input class="input" type="text" placeholder="i.e. Bright lighting" />
+      </div>
+
+      <!-- FINN — Deliverables -->
+      <div class="finn-panel" id="finn-1">
+        <div class="finn-panel-header">
+          <div class="finn-panel-title">
+            <div class="finn-avatar">
+              <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="3.5" stroke="#fff" stroke-width="1.6"/><path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </div>
+            <div>
+              <div class="finn-heading">Finn Analysis <span class="badge">Beta</span></div>
+              <div class="finn-subtext">AI review · Deliverables</div>
+            </div>
+          </div>
+          <button class="finn-run-btn" id="finn-run-1" onclick="runFinn(1)">✦ Analyze with Finn</button>
+        </div>
+        <div class="finn-results" id="finn-results-1">
+          <div class="finn-ts" id="finn-ts-1">Last analysis run: just now</div>
+          <div class="finn-suggestion" id="finn-1-s0">
+            <div class="finn-sug-header">
+              <span class="warn-icon">⚠</span>
+              <span class="finn-sug-field">Hashtags</span>
+            </div>
+            <div class="finn-sug-body">Add these trending hashtags to improve discoverability: <strong>#SkinTok</strong> (243M views), <strong>#CleanBeauty</strong> (89M views), <strong>#SelfCareSunday</strong> (56M views), <strong>#GlowUp</strong> (178M views), <strong>#Company-name</strong> (from your brand guidelines).</div>
+            <div class="finn-sug-actions">
+              <button class="sug-apply" onclick="applySuggestion('finn-1-s0')">✦ Apply suggestion</button>
+              <button class="sug-dismiss" onclick="dismissSuggestion('finn-1-s0')">Dismiss</button>
+            </div>
+          </div>
+          <div class="finn-suggestion" id="finn-1-s1">
+            <div class="finn-sug-header">
+              <span class="warn-icon">⚠</span>
+              <span class="finn-sug-field">Mentions</span>
+            </div>
+            <div class="finn-sug-body">Your brand guidelines include <strong>@Company-name</strong> as a required mention. Add it so creators know to tag the official account in their post.</div>
+            <div class="finn-sug-actions">
+              <button class="sug-apply" onclick="applySuggestion('finn-1-s1')">✦ Apply suggestion</button>
+              <button class="sug-dismiss" onclick="dismissSuggestion('finn-1-s1')">Dismiss</button>
+            </div>
+          </div>
+        </div>
+        <div class="finn-allclear" id="finn-allclear-1">
+          <div class="finn-allclear-icon">✅</div>
+          <div>
+            <div class="finn-allclear-text">No issues found on this section</div>
+            <div class="finn-allclear-sub">Your Deliverables section looks great!</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-footer">
+        <button class="btn btn-ghost" onclick="prevStep()">← Previous</button>
+        <button class="btn btn-dark" onclick="nextStep()">Continue →</button>
+      </div>
+    </div><!-- /page-1 -->
+
+    <!-- ══ STEP 3: Payment & Deadlines ════════════════════ -->
+    <div class="page" id="page-2">
+      <div class="card">
+        <div class="card-title">📅 Deadlines</div>
+        <div class="timeline" style="margin:16px 0 20px">
+          <div class="tl-item"><span class="tl-name">Launch Brief</span><span class="tl-week">Week 1</span></div>
+          <div class="tl-sep"></div>
+          <div class="tl-item"><span class="tl-name">Accept applicants</span><span class="tl-week">Week 2</span></div>
+          <div class="tl-sep"></div>
+          <div class="tl-item"><span class="tl-name">Ship products</span><span class="tl-week">Week 3</span></div>
+          <div class="tl-sep"></div>
+          <div class="tl-item"><span class="tl-name">Receive content</span><span class="tl-week">Week 4</span></div>
+          <div class="tl-sep"></div>
+          <div class="tl-item"><span class="tl-name">Post content</span><span class="tl-week">Week 5</span></div>
+        </div>
+        <div class="date-group">
+          <div class="date-row">
+            <div class="field-label">Deadline for applications <span class="required">*</span></div>
+            <input class="input" id="deadline-applications-input" type="date" />
+          </div>
+          <div class="date-row">
+            <div class="field-label">Ship products <span class="required">*</span></div>
+            <input class="input" type="date" />
+          </div>
+          <div class="date-row">
+            <div class="field-label">Receive content <span class="required">*</span></div>
+            <input class="input" type="date" />
+          </div>
+          <div class="date-row">
+            <div class="field-label">Post content <span class="required">*</span></div>
+            <div class="radio-row" style="margin-bottom:8px">
+              <input type="radio" name="postdate" checked /> Specific date
+              <input type="radio" name="postdate" style="margin-left:16px" /> Across a date range
+            </div>
+            <input class="input" type="date" />
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">$ Creator compensation</div>
+        <div class="seg-btn-group" style="margin-top:16px">
+          <button class="seg-btn active" onclick="selSeg(this)">Payment</button>
+          <button class="seg-btn" onclick="selSeg(this)">Product only</button>
+        </div>
+        <div class="field-label">Compensation structure</div>
+        <div style="display:flex;gap:20px;margin:8px 0 16px">
+          <div class="radio-row"><input type="radio" name="comp" checked /> Flat rate</div>
+          <div class="radio-row"><input type="radio" name="comp" /> Tiered by followers</div>
+          <div class="radio-row"><input type="radio" name="comp" /> Negotiate</div>
+        </div>
+        <div class="date-row" style="max-width:220px">
+          <div class="field-label">Each creator will be paid <span class="required">*</span></div>
+          <input class="input" id="compensation-amount-input" type="number" placeholder="$ 0.00" />
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="field-label">Additional legal Terms and Conditions <span class="required">*</span></div>
+        <div style="display:flex;gap:20px;margin:10px 0 14px">
+          <div class="radio-row"><input type="radio" name="tnc" checked /> Default Terms and Conditions</div>
+          <div class="radio-row"><input type="radio" name="tnc" /> Add from Company Materials</div>
+        </div>
+        <textarea class="textarea" style="min-height:90px">All content must be uploaded in Cohley and posted by outlined brief deadlines in order to be considered for compensation and future collaborations.</textarea>
+        <div style="font-size:12px;color:#8f9295;margin-top:6px">All Creators must agree to <span style="color:#0d6efd;text-decoration:underline;cursor:pointer">Cohley Terms and Conditions</span> in order to apply.</div>
+      </div>
+
+      <!-- FINN — Payment & Deadlines -->
+      <div class="finn-panel" id="finn-2">
+        <div class="finn-panel-header">
+          <div class="finn-panel-title">
+            <div class="finn-avatar">
+              <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="3.5" stroke="#fff" stroke-width="1.6"/><path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </div>
+            <div>
+              <div class="finn-heading">Finn Analysis <span class="badge">Beta</span></div>
+              <div class="finn-subtext">AI review · Payment &amp; Deadlines</div>
+            </div>
+          </div>
+          <button class="finn-run-btn" id="finn-run-2" onclick="runFinn(2)">✦ Analyze with Finn</button>
+        </div>
+        <div class="finn-results" id="finn-results-2">
+          <div class="finn-ts" id="finn-ts-2">Last analysis run: just now</div>
+          <div class="finn-suggestion" id="finn-2-s0">
+            <div class="finn-sug-header">
+              <span class="warn-icon">⚠</span>
+              <span class="finn-sug-field">Application deadline</span>
+            </div>
+            <div class="finn-sug-body">With today's date, creators would only have <strong>1 day</strong> to apply. Cohley recommends at least <strong>3 days</strong> to attract quality applicants.</div>
+            <div class="finn-sug-actions">
+              <button class="sug-apply" onclick="applySuggestion('finn-2-s0')">✦ Extend to 3 days</button>
+              <button class="sug-dismiss" onclick="dismissSuggestion('finn-2-s0')">Dismiss</button>
+            </div>
+          </div>
+          <div class="finn-suggestion" id="finn-2-s1">
+            <div class="finn-sug-header">
+              <span class="warn-icon">⚠</span>
+              <span class="finn-sug-field">Creator Compensation</span>
+            </div>
+            <div class="finn-sug-body">You set <strong>$200</strong> for 2 reels + 1 post. Cohley benchmarks suggest <strong>$500</strong> for this deliverable level — low compensation risks fewer quality applications.</div>
+            <div class="finn-sug-actions">
+              <button class="sug-apply" onclick="applySuggestion('finn-2-s1')">✦ Update to $500</button>
+              <button class="sug-dismiss" onclick="dismissSuggestion('finn-2-s1')">Dismiss</button>
+            </div>
+          </div>
+        </div>
+        <div class="finn-allclear" id="finn-allclear-2">
+          <div class="finn-allclear-icon">✅</div>
+          <div>
+            <div class="finn-allclear-text">No issues found on this section</div>
+            <div class="finn-allclear-sub">Deadlines and compensation look great!</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-footer">
+        <button class="btn btn-ghost" onclick="prevStep()">← Previous</button>
+        <button class="btn btn-dark" onclick="nextStep()">Continue →</button>
+      </div>
+    </div><!-- /page-2 -->
+
+    <!-- ══ STEP 4: Creator Targeting ══════════════════════ -->
+    <div class="page" id="page-3">
+      <div class="card">
+        <div class="radio-cards" style="margin-bottom:0">
+          <div class="radio-card selected" onclick="selectCard(this)">
+            <div style="font-size:24px;margin-bottom:4px">👥</div>
+            <div class="rc-label">Public</div>
+            <div class="rc-desc">All Creators may apply</div>
+          </div>
+          <div class="radio-card" onclick="selectCard(this)">
+            <div style="font-size:24px;margin-bottom:4px">❤️</div>
+            <div class="rc-label">Private brief</div>
+            <div class="rc-desc">Hand select Creators from the Creator Hub</div>
+          </div>
+          <div class="radio-card" onclick="selectCard(this)">
+            <div style="font-size:24px;margin-bottom:4px">⚙️</div>
+            <div class="rc-label">Creator criteria</div>
+            <div class="rc-desc">Limit who can apply based on demographics</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="toggle-row">
+          <label class="toggle"><input type="checkbox"/><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-label">Enable brief screening ❓</span>
+        </div>
+        <div class="helper-text">Block Creators from reading the brief if they don't meet screening requirements.</div>
+      </div>
+
+      <div class="card" id="card-creator-insights">
+        <div class="toggle-row">
+          <label class="toggle">
+            <input type="checkbox" id="creator-insights-toggle" onchange="toggleInsightsSection(this)" />
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+          <span class="toggle-label">Add custom Creator insights ❓</span>
+        </div>
+        <div class="helper-text">Survey questions can be added to the brief application to help cast the best Creators.</div>
+
+        <!-- Questions section shown when toggle is on or Finn applies -->
+        <div class="questions-block" id="creator-insights-questions">
+          <div class="q-item">
+            <label>Q1 — Multiple choice: Do you have experience with skincare routines?</label>
+            <div class="q-option"><input type="checkbox" /> Yes, daily routine</div>
+            <div class="q-option"><input type="checkbox" /> Yes, occasionally</div>
+            <div class="q-option"><input type="checkbox" /> No experience</div>
+            <div class="q-option"><input type="checkbox" /> Currently learning</div>
+          </div>
+          <div class="q-item">
+            <label>Q2 — Short answer: Describe your current skincare routine</label>
+            <textarea class="textarea" style="min-height:60px" placeholder="Creators will answer this when applying…"></textarea>
+          </div>
+          <button class="btn btn-outline btn-sm" style="margin-top:4px">+ Add question</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="toggle-row">
+          <label class="toggle"><input type="checkbox" checked/><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-label">Request a visual sample from the Creator</span>
+        </div>
+        <div class="helper-text">Select the sample type you'd like to request from the Creator.</div>
+      </div>
+
+      <!-- FINN — Creator Targeting -->
+      <div class="finn-panel" id="finn-3">
+        <div class="finn-panel-header">
+          <div class="finn-panel-title">
+            <div class="finn-avatar">
+              <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="3.5" stroke="#fff" stroke-width="1.6"/><path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </div>
+            <div>
+              <div class="finn-heading">Finn Analysis <span class="badge">Beta</span></div>
+              <div class="finn-subtext">AI review · Creator Targeting</div>
+            </div>
+          </div>
+          <button class="finn-run-btn" id="finn-run-3" onclick="runFinn(3)">✦ Analyze with Finn</button>
+        </div>
+        <div class="finn-results" id="finn-results-3">
+          <div class="finn-ts" id="finn-ts-3">Last analysis run: just now</div>
+          <div class="finn-suggestion" id="finn-3-s0">
+            <div class="finn-sug-header">
+              <span class="warn-icon">⚠</span>
+              <span class="finn-sug-field">Additional Brief Questions</span>
+            </div>
+            <div class="finn-sug-body">
+              Based on your brand guidelines, we suggest adding 2 Creator insights questions to improve casting quality:
+              <br/>• <strong>Multiple choice:</strong> Do you have experience with skincare routines?
+              <br/>• <strong>Short answer:</strong> Describe your current skincare routine…
+            </div>
+            <div class="finn-sug-actions">
+              <button class="sug-apply" onclick="applySuggestion('finn-3-s0')">✦ Add questions</button>
+              <button class="sug-dismiss" onclick="dismissSuggestion('finn-3-s0')">Dismiss</button>
+            </div>
+          </div>
+        </div>
+        <div class="finn-allclear" id="finn-allclear-3">
+          <div class="finn-allclear-icon">✅</div>
+          <div>
+            <div class="finn-allclear-text">No issues found on this section</div>
+            <div class="finn-allclear-sub">Your Creator Targeting section is ready to go!</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-footer">
+        <button class="btn btn-ghost" onclick="prevStep()">← Previous</button>
+        <button class="btn btn-dark" onclick="nextStep()">🚀 Launch Brief</button>
+      </div>
+    </div><!-- /page-3 -->
+
+    <!-- ══ SUCCESS PAGE ════════════════════════════════════ -->
+    <div class="page" id="page-4">
+      <div class="success-page">
+        <div class="success-icon">🎉</div>
+        <div class="success-title">Brief Launched!</div>
+        <div class="success-sub">Your Influencer Partnership Brief is live. Creators can now apply.</div>
+        <button class="btn btn-dark" style="margin-top:8px" onclick="currentStep=0;render()">Start a new brief</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+/* ─── STATE ───────────────────────────────────────────────────── */
+let currentStep = 0;
+
+const STEPS = [
+  { label: 'Products for Brief' },
+  { label: 'Deliverables' },
+  { label: 'Payment and Deadlines' },
+  { label: 'Creator Targeting' },
+];
+
+// Per-panel state: tracks which suggestions have been resolved/dismissed
+const finnState = {
+  0: { ran: false, resolved: new Set(), dismissed: new Set(), suggestions: ['finn-0-s0'] },
+  1: { ran: false, resolved: new Set(), dismissed: new Set(), suggestions: ['finn-1-s0', 'finn-1-s1'] },
+  2: { ran: false, resolved: new Set(), dismissed: new Set(), suggestions: ['finn-2-s0', 'finn-2-s1'] },
+  3: { ran: false, resolved: new Set(), dismissed: new Set(), suggestions: ['finn-3-s0'] },
+};
+
+/* ─── SIDEBAR RENDER ──────────────────────────────────────────── */
+function render() {
+  const nav = document.getElementById('steps-nav');
+  nav.innerHTML = '';
+  STEPS.forEach((s, i) => {
+    const isLast = i === STEPS.length - 1;
+    const done   = i < currentStep;
+    const active = i === currentStep;
+    const step   = document.createElement('div');
+    step.className = 'step';
+    step.onclick = () => { currentStep = i; render(); };
+
+    const row  = document.createElement('div');
+    row.className = 'step-row';
+    const icon = document.createElement('div');
+    icon.className = 'step-icon' + (done ? ' done' : active ? ' active' : '');
+    if (done) icon.innerHTML = '✓';
+    row.appendChild(icon);
+    const lbl = document.createElement('div');
+    lbl.className = 'step-label' + (!done && !active ? ' muted' : '');
+    lbl.textContent = s.label;
+    row.appendChild(lbl);
+    step.appendChild(row);
+
+    if (!isLast) {
+      const conn = document.createElement('div');
+      conn.className = 'step-connector' + (done ? ' done' : '');
+      step.appendChild(conn);
+    }
+    nav.appendChild(step);
+  });
+
+  document.querySelectorAll('.page').forEach((p, i) => p.classList.toggle('active', i === currentStep));
+
+  const nb = document.getElementById('next-btn');
+  if (currentStep >= STEPS.length)   nb.textContent = '✕ Close';
+  else if (currentStep === STEPS.length - 1) nb.textContent = '🚀 Launch Brief';
+  else nb.textContent = 'Continue →';
+}
+function nextStep() { if (currentStep < STEPS.length) { currentStep++; render(); scrollTo(0, 64); } }
+function prevStep() { if (currentStep > 0) { currentStep--; render(); scrollTo(0, 64); } }
+
+/* ─── FINN: RUN / RE-ANALYZE ──────────────────────────────────── */
+function runFinn(idx) {
+  const state   = finnState[idx];
+  const btn     = document.getElementById('finn-run-' + idx);
+  const results = document.getElementById('finn-results-' + idx);
+  const allclear = document.getElementById('finn-allclear-' + idx);
+  const panel   = document.getElementById('finn-' + idx);
+
+  btn.disabled = true;
+
+  // If re-analyzing: show a scan overlay over the existing results
+  if (state.ran && results.classList.contains('visible')) {
+    const overlay = document.createElement('div');
+    overlay.className = 'finn-scan-overlay';
+    overlay.id = 'finn-overlay-' + idx;
+    overlay.innerHTML = `<div class="scan-spinner"></div><span>Re-scanning your brief…</span>`;
+    results.appendChild(overlay);
+    // briefly hide allclear
+    allclear.classList.remove('visible');
+  } else {
+    btn.innerHTML = `<div class="spinner" style="width:14px;height:14px;border-width:2px;border-top-color:#fff;margin-right:4px"></div> Analyzing…`;
+  }
+
+  setTimeout(() => {
+    state.ran = true;
+    btn.disabled = false;
+
+    // Remove overlay
+    const overlay = document.getElementById('finn-overlay-' + idx);
+    if (overlay) { overlay.style.animation = 'fadeOut .2s ease forwards'; setTimeout(() => overlay.remove(), 200); }
+
+    // Update timestamp
+    const now = new Date();
+    const ts = `${state.ran ? 'Re-analyzed' : 'Last analysis run'}: ${now.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})} at ${now.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'})}`;
+    document.getElementById('finn-ts-' + idx).textContent = ts;
+
+    // Switch button to "Re-analyze"
+    btn.innerHTML = `↺ Re-analyze`;
+    btn.classList.add('reanalyze');
+    btn.textContent = '↺ Re-analyze';
+
+    // Show results
+    results.classList.add('visible');
+
+    // Check remaining open suggestions
+    const open = state.suggestions.filter(sid => !state.resolved.has(sid) && !state.dismissed.has(sid));
+    if (open.length === 0) {
+      // Everything resolved — show allclear, green border
+      allclear.classList.add('visible');
+      panel.classList.add('finn-clear');
+    }
+  }, 1400);
+}
+
+/* ─── APPLY SUGGESTION → fills the actual field ──────────────── */
+function applySuggestion(id) {
+  const parts = id.split('-'); // e.g. ['finn','1','s0']
+  const idx   = parseInt(parts[1]);
+
+  switch (id) {
+    /* ── Products: usage instructions ── */
+    case 'finn-0-s0': {
+      const ta = document.getElementById('product-usage-textarea');
+      ta.value = 'Start with the Daily Cleanser (Step 1), followed by the Hydrating Toner (Step 2). Apply the Vitamin C Serum (Step 3) to damp skin, then moisturise with the Repair Cream (Step 4). Finish with the SPF 50 Sunscreen (Step 5) every morning. Products work best when layered within 60 seconds on damp skin. Avoid mixing Step 3 with Step 4 at night — use the Repair Cream alone for best overnight results.';
+      flashField(ta);
+      smoothScrollTo(ta);
+      break;
+    }
+
+    /* ── Deliverables: hashtags ── */
+    case 'finn-1-s0': {
+      const container = document.getElementById('hashtag-tag-input');
+      const textInput = document.getElementById('hashtag-text-input');
+      const tags = ['#SkinTok', '#CleanBeauty', '#SelfCareSunday', '#GlowUp', '#Company-name'];
+      // existing tags
+      const existing = [...container.querySelectorAll('.tag')].map(t => t.textContent.trim());
+      tags.forEach(tag => {
+        if (!existing.includes(tag)) addTag(container, textInput, tag);
+      });
+      flashField(container);
+      smoothScrollTo(container);
+      break;
+    }
+
+    /* ── Deliverables: mentions ── */
+    case 'finn-1-s1': {
+      const input = document.getElementById('mentions-input');
+      input.value = '@Company-name';
+      flashField(input);
+      smoothScrollTo(input);
+      break;
+    }
+
+    /* ── Payment: deadline +3 days ── */
+    case 'finn-2-s0': {
+      const deadlineInput = document.getElementById('deadline-applications-input');
+      const d = new Date();
+      d.setDate(d.getDate() + 3);
+      deadlineInput.value = d.toISOString().split('T')[0];
+      flashField(deadlineInput);
+      smoothScrollTo(deadlineInput);
+      break;
+    }
+
+    /* ── Payment: compensation $500 ── */
+    case 'finn-2-s1': {
+      const compInput = document.getElementById('compensation-amount-input');
+      const prev = compInput.value;
+      compInput.value = '500';
+      flashField(compInput);
+      smoothScrollTo(compInput);
+      break;
+    }
+
+    /* ── Targeting: add creator insight questions ── */
+    case 'finn-3-s0': {
+      const toggle = document.getElementById('creator-insights-toggle');
+      const section = document.getElementById('creator-insights-questions');
+      toggle.checked = true;
+      section.classList.add('visible', 'slide-in');
+      const card = document.getElementById('card-creator-insights');
+      flashField(card);
+      smoothScrollTo(card);
+      break;
+    }
+  }
+
+  markResolved(id, idx);
+}
+
+/* ─── MARK RESOLVED (green check, no actions) ────────────────── */
+function markResolved(id, idx) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  finnState[idx].resolved.add(id);
+  el.classList.add('resolved');
+  const warnIcon = el.querySelector('.warn-icon');
+  if (warnIcon) warnIcon.textContent = '✓';
+  const actions = el.querySelector('.finn-sug-actions');
+  if (actions) {
+    // Replace actions with an "applied" pill
+    const pill = document.createElement('div');
+    pill.className = 'finn-applied-pill';
+    pill.innerHTML = '✓ Applied to brief';
+    actions.replaceWith(pill);
+  }
+  checkAllResolved(idx);
+}
+
+/* ─── DISMISS SUGGESTION (fade out) ──────────────────────────── */
+function dismissSuggestion(id) {
+  const parts = id.split('-');
+  const idx   = parseInt(parts[1]);
+  finnState[idx].dismissed.add(id);
+  const el = document.getElementById(id);
+  el.style.transition = 'opacity .3s, transform .3s, max-height .4s, margin .3s, padding .3s';
+  el.style.opacity = '0';
+  el.style.transform = 'translateX(12px)';
+  setTimeout(() => {
+    el.style.maxHeight = '0';
+    el.style.margin = '0';
+    el.style.padding = '0';
+    el.style.overflow = 'hidden';
+    setTimeout(() => checkAllResolved(idx), 420);
+  }, 300);
+}
+
+/* ─── CHECK IF ALL DONE → show allclear ──────────────────────── */
+function checkAllResolved(idx) {
+  const state = finnState[idx];
+  const open  = state.suggestions.filter(sid => !state.resolved.has(sid) && !state.dismissed.has(sid));
+  if (open.length === 0 && (state.resolved.size + state.dismissed.size) > 0) {
+    setTimeout(() => {
+      const allclear = document.getElementById('finn-allclear-' + idx);
+      allclear.classList.add('visible');
+      document.getElementById('finn-' + idx).classList.add('finn-clear');
+    }, 450);
+  }
+}
+
+/* ─── HELPERS ─────────────────────────────────────────────────── */
+function flashField(el) {
+  el.classList.remove('field-applied');
+  void el.offsetWidth; // reflow to restart animation
+  el.classList.add('field-applied');
+  el.addEventListener('animationend', () => el.classList.remove('field-applied'), { once: true });
+}
+
+function smoothScrollTo(el) {
+  setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
+}
+
+function addTag(container, textInput, tagText) {
+  const span = document.createElement('span');
+  span.className = 'tag tag-finn tag-new';
+  span.textContent = tagText;
+  container.insertBefore(span, textInput);
+}
+
+function toggleInsightsSection(checkbox) {
+  const section = document.getElementById('creator-insights-questions');
+  if (checkbox.checked) {
+    section.classList.add('visible', 'slide-in');
+  } else {
+    section.classList.remove('visible', 'slide-in');
+  }
+}
+
+function selectCard(el) {
+  el.parentElement.querySelectorAll('.radio-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function selPlatform(el) {
+  el.parentElement.querySelectorAll('.platform-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+function selSeg(el) {
+  el.parentElement.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+function counter(btn, dir) {
+  const input = btn.parentElement.querySelector('.counter-val');
+  input.value = Math.max(0, (parseInt(input.value) || 0) + dir);
+}
+
+/* ─── INIT ────────────────────────────────────────────────────── */
+render();
+</script>
+</body>
+</html>
