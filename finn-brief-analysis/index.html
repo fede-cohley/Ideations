@@ -18,6 +18,11 @@
     }
     .nav-left { display: flex; align-items: center; gap: 8px; color: #373b3f; font-size: 14px; }
     .spinner { width: 20px; height: 20px; border: 2px solid #d2d3d5; border-top-color: #212529; border-radius: 50%; animation: spin .8s linear infinite; }
+    .save-check { font-size: 15px; color: #28a745; font-weight: 700; }
+    #save-status { transition: color .2s; }
+    #save-status.saving { color: #8f9295; }
+    #save-status.saving .save-check { display: none; }
+    #save-status.saving .save-spinner { display: block !important; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .nav-right { display: flex; align-items: center; gap: 8px; }
     .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: 8px; font-family: inherit; font-size: 16px; font-weight: 600; cursor: pointer; border: none; transition: opacity .15s; }
@@ -244,15 +249,60 @@
     .q-item label { font-size: 13px; font-weight: 700; color: #212529; display: block; margin-bottom: 8px; }
     .q-option { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 6px; }
     .q-option input { accent-color: #212529; }
+    /* ── PASSWORD GATE ───────────────────────────────────────── */
+    #pw-gate {
+      position: fixed; inset: 0; z-index: 9999;
+      background: #f4f4f5;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #pw-gate.hidden { display: none; }
+    .pw-box {
+      background: #fff; border: 1px solid #d2d3d5; border-radius: 12px;
+      padding: 40px 36px; width: 340px; text-align: center;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+    }
+    .pw-logo { font-size: 28px; font-weight: 700; color: #212529; margin-bottom: 6px; }
+    .pw-sub  { font-size: 14px; color: #8f9295; margin-bottom: 24px; }
+    .pw-input {
+      width: 100%; padding: 11px 14px; border: 1.5px solid #d2d3d5; border-radius: 8px;
+      font-family: inherit; font-size: 15px; outline: none; margin-bottom: 12px;
+      transition: border-color .15s;
+    }
+    .pw-input:focus { border-color: #212529; }
+    .pw-input.error { border-color: #dc3545; animation: shake .3s ease; }
+    .pw-btn {
+      width: 100%; padding: 12px; background: #212529; color: #fff;
+      border: none; border-radius: 8px; font-family: inherit;
+      font-size: 15px; font-weight: 600; cursor: pointer;
+    }
+    .pw-btn:hover { opacity: .85; }
+    .pw-err { font-size: 13px; color: #dc3545; margin-top: 10px; display: none; }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      25%      { transform: translateX(-6px); }
+      75%      { transform: translateX(6px); }
+    }
   </style>
 </head>
 <body>
 
+<!-- PASSWORD GATE -->
+<div id="pw-gate">
+  <div class="pw-box">
+    <div class="pw-logo">Finn Brief</div>
+    <div class="pw-sub">Enter the password to access this prototype</div>
+    <input id="pw-input" class="pw-input" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')checkPw()" autofocus />
+    <button class="pw-btn" onclick="checkPw()">Continue →</button>
+    <div class="pw-err" id="pw-err">Incorrect password. Try again.</div>
+  </div>
+</div>
+
 <!-- TOP NAV -->
 <nav class="top-nav">
-  <div class="nav-left">
-    <div class="spinner"></div>
-    Saving…
+  <div class="nav-left" id="save-status">
+    <span class="save-check">✓</span>
+    <span class="save-spinner spinner" style="display:none"></span>
+    <span id="save-label">Saved</span>
   </div>
   <div class="nav-right">
     <button class="btn btn-outline btn-sm" onclick="prevStep()">← Previous</button>
@@ -408,7 +458,7 @@
 
       <div class="card">
         <div class="field-label">#Hashtags</div>
-        <div class="helper-text">What hashtags would you like the creator to include in their social post?</div>
+        <div class="helper-text">Type a hashtag and press <strong>comma</strong> or <strong>Enter</strong> to add it.</div>
         <div class="tag-input" id="hashtag-tag-input">
           <span class="tag">#skincare</span>
           <input id="hashtag-text-input" type="text" style="border:none;outline:none;font-size:14px;flex:1;min-width:80px" placeholder="Add hashtag…" />
@@ -417,8 +467,10 @@
 
       <div class="card">
         <div class="field-label">@Mentions</div>
-        <div class="helper-text">What account should the creator tag in their post?</div>
-        <input class="input" id="mentions-input" type="text" placeholder="@brandname" />
+        <div class="helper-text">Type an account and press <strong>comma</strong> or <strong>Enter</strong> to add it.</div>
+        <div class="tag-input" id="mentions-tag-input">
+          <input id="mentions-text-input" type="text" style="border:none;outline:none;font-size:14px;flex:1;min-width:80px" placeholder="@brandname…" />
+        </div>
       </div>
 
       <div class="card">
@@ -438,8 +490,10 @@
       <div class="card">
         <div class="card-title">Content non-negotiables <span class="required">*</span></div>
         <div class="alert-info" style="margin-top:12px">List essential guidelines here. Finn will check each submitted asset for compliance upon Creator upload.</div>
-        <div class="helper-text">Press <strong>Enter</strong> to add each item.</div>
-        <input class="input" type="text" placeholder="i.e. Bright lighting" />
+        <div class="helper-text">Type a guideline and press <strong>comma</strong> or <strong>Enter</strong> to add it.</div>
+        <div class="tag-input" id="nonneg-tag-input" style="flex-wrap:wrap">
+          <input id="nonneg-text-input" type="text" style="border:none;outline:none;font-size:14px;flex:1;min-width:120px" placeholder="i.e. Bright lighting…" />
+        </div>
       </div>
 
       <!-- FINN — Deliverables -->
@@ -478,6 +532,17 @@
             <div class="finn-sug-actions">
               <button class="sug-apply" onclick="applySuggestion('finn-1-s1')">✦ Apply suggestion</button>
               <button class="sug-dismiss" onclick="dismissSuggestion('finn-1-s1')">Dismiss</button>
+            </div>
+          </div>
+          <div class="finn-suggestion" id="finn-1-s2">
+            <div class="finn-sug-header">
+              <span class="warn-icon">⚠</span>
+              <span class="finn-sug-field">Content non-negotiables <span style="font-size:11px;font-weight:400;color:#dc3545;margin-left:4px">Required</span></span>
+            </div>
+            <div class="finn-sug-body">No content guidelines have been added — this is a required field. Based on your brand, we suggest: <strong>Bright natural lighting</strong>, <strong>Product clearly visible</strong>, <strong>No competitor products in frame</strong>, <strong>Show full routine</strong>.</div>
+            <div class="finn-sug-actions">
+              <button class="sug-apply" onclick="applySuggestion('finn-1-s2')">✦ Add guidelines</button>
+              <button class="sug-dismiss" onclick="dismissSuggestion('finn-1-s2')">Dismiss</button>
             </div>
           </div>
         </div>
@@ -757,10 +822,24 @@ const STEPS = [
 // Per-panel state: tracks which suggestions have been resolved/dismissed
 const finnState = {
   0: { ran: false, resolved: new Set(), dismissed: new Set(), suggestions: ['finn-0-s0'] },
-  1: { ran: false, resolved: new Set(), dismissed: new Set(), suggestions: ['finn-1-s0', 'finn-1-s1'] },
+  1: { ran: false, resolved: new Set(), dismissed: new Set(), suggestions: ['finn-1-s0', 'finn-1-s1', 'finn-1-s2'] },
   2: { ran: false, resolved: new Set(), dismissed: new Set(), suggestions: ['finn-2-s0', 'finn-2-s1'] },
   3: { ran: false, resolved: new Set(), dismissed: new Set(), suggestions: ['finn-3-s0'] },
 };
+
+// Original apply button labels (restored when un-resolving)
+const SUGGESTION_LABELS = {
+  'finn-0-s0': '✦ Apply suggestion',
+  'finn-1-s0': '✦ Apply suggestion',
+  'finn-1-s1': '✦ Apply suggestion',
+  'finn-2-s0': '✦ Extend to 3 days',
+  'finn-2-s1': '✦ Update to $500',
+  'finn-1-s2': '✦ Add guidelines',
+  'finn-3-s0': '✦ Add questions',
+};
+
+// Tracks which suggestions already have field-change watchers attached
+const appliedWatchers = new Set();
 
 /* ─── SIDEBAR RENDER ──────────────────────────────────────────── */
 function render() {
@@ -870,6 +949,7 @@ function applySuggestion(id) {
       ta.value = 'Start with the Daily Cleanser (Step 1), followed by the Hydrating Toner (Step 2). Apply the Vitamin C Serum (Step 3) to damp skin, then moisturise with the Repair Cream (Step 4). Finish with the SPF 50 Sunscreen (Step 5) every morning. Products work best when layered within 60 seconds on damp skin. Avoid mixing Step 3 with Step 4 at night — use the Repair Cream alone for best overnight results.';
       flashField(ta);
       smoothScrollTo(ta);
+      addFieldWatcher('finn-0-s0', 0, () => ta.addEventListener('input', () => unresolve('finn-0-s0', 0)));
       break;
     }
 
@@ -878,22 +958,42 @@ function applySuggestion(id) {
       const container = document.getElementById('hashtag-tag-input');
       const textInput = document.getElementById('hashtag-text-input');
       const tags = ['#SkinTok', '#CleanBeauty', '#SelfCareSunday', '#GlowUp', '#Company-name'];
-      // existing tags
       const existing = [...container.querySelectorAll('.tag')].map(t => t.textContent.trim());
       tags.forEach(tag => {
         if (!existing.includes(tag)) addTag(container, textInput, tag);
       });
       flashField(container);
       smoothScrollTo(container);
+      // Watcher is handled via removeTag() — no extra listener needed
       break;
     }
 
     /* ── Deliverables: mentions ── */
     case 'finn-1-s1': {
-      const input = document.getElementById('mentions-input');
-      input.value = '@Company-name';
-      flashField(input);
-      smoothScrollTo(input);
+      const container = document.getElementById('mentions-tag-input');
+      const textInput = document.getElementById('mentions-text-input');
+      const existing = [...container.querySelectorAll('.tag')].map(t => t.textContent.replace('×','').trim());
+      if (!existing.includes('@Company-name')) addTag(container, textInput, '@Company-name');
+      flashField(container);
+      smoothScrollTo(container);
+      // Watcher handled via removeTag()
+      break;
+    }
+
+    /* ── Deliverables: content non-negotiables ── */
+    case 'finn-1-s2': {
+      const container = document.getElementById('nonneg-tag-input');
+      const textInput = document.getElementById('nonneg-text-input');
+      const items = ['Bright natural lighting', 'Product clearly visible', 'No competitor products in frame', 'Show full routine'];
+      const existing = [...container.querySelectorAll('.tag')].map(t => t.textContent.replace('×','').trim());
+      items.forEach(item => { if (!existing.includes(item)) addRegularTag(container, textInput, item); });
+      flashField(container);
+      smoothScrollTo(container);
+      addFieldWatcher('finn-1-s2', 1, () => {
+        new MutationObserver(() => {
+          if (container.querySelectorAll('.tag').length === 0) unresolve('finn-1-s2', 1);
+        }).observe(container, { childList: true });
+      });
       break;
     }
 
@@ -905,16 +1005,17 @@ function applySuggestion(id) {
       deadlineInput.value = d.toISOString().split('T')[0];
       flashField(deadlineInput);
       smoothScrollTo(deadlineInput);
+      addFieldWatcher('finn-2-s0', 2, () => deadlineInput.addEventListener('change', () => unresolve('finn-2-s0', 2)));
       break;
     }
 
     /* ── Payment: compensation $500 ── */
     case 'finn-2-s1': {
       const compInput = document.getElementById('compensation-amount-input');
-      const prev = compInput.value;
       compInput.value = '500';
       flashField(compInput);
       smoothScrollTo(compInput);
+      addFieldWatcher('finn-2-s1', 2, () => compInput.addEventListener('input', () => unresolve('finn-2-s1', 2)));
       break;
     }
 
@@ -927,6 +1028,9 @@ function applySuggestion(id) {
       const card = document.getElementById('card-creator-insights');
       flashField(card);
       smoothScrollTo(card);
+      addFieldWatcher('finn-3-s0', 3, () => toggle.addEventListener('change', () => {
+        if (!toggle.checked) unresolve('finn-3-s0', 3);
+      }));
       break;
     }
   }
@@ -984,6 +1088,53 @@ function checkAllResolved(idx) {
   }
 }
 
+/* ─── UN-RESOLVE: restore suggestion to warning state ────────── */
+function unresolve(id, idx) {
+  const state = finnState[idx];
+  if (!state.resolved.has(id)) return; // already open, nothing to do
+  state.resolved.delete(id);
+
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  el.classList.remove('resolved');
+  const warnIcon = el.querySelector('.warn-icon');
+  if (warnIcon) warnIcon.textContent = '⚠';
+
+  // Swap the "applied" pill back to action buttons
+  const pill = el.querySelector('.finn-applied-pill');
+  if (pill) {
+    const actions = document.createElement('div');
+    actions.className = 'finn-sug-actions';
+    const label = SUGGESTION_LABELS[id] || '✦ Apply suggestion';
+    actions.innerHTML = `<button class="sug-apply" onclick="applySuggestion('${id}')">${label}</button><button class="sug-dismiss" onclick="dismissSuggestion('${id}')">Dismiss</button>`;
+    pill.replaceWith(actions);
+  }
+
+  // Collapse all-clear banner and green border
+  document.getElementById('finn-allclear-' + idx).classList.remove('visible');
+  document.getElementById('finn-' + idx).classList.remove('finn-clear');
+}
+
+/* ─── ADD FIELD WATCHER (once per suggestion) ────────────────── */
+function addFieldWatcher(id, idx, setupFn) {
+  if (appliedWatchers.has(id)) return;
+  appliedWatchers.add(id);
+  setupFn();
+}
+
+/* ─── REMOVE TAG (× button) — works for any tag container ───── */
+function removeTag(btn) {
+  const tag = btn.closest('.tag');
+  const container = tag.closest('.tag-input');
+  const isFinn = tag.classList.contains('tag-finn');
+  tag.remove();
+  if (isFinn && container.querySelectorAll('.tag-finn').length === 0) {
+    if (container.id === 'hashtag-tag-input')  unresolve('finn-1-s0', 1);
+    if (container.id === 'mentions-tag-input') unresolve('finn-1-s1', 1);
+  }
+}
+
 /* ─── HELPERS ─────────────────────────────────────────────────── */
 function flashField(el) {
   el.classList.remove('field-applied');
@@ -999,8 +1150,36 @@ function smoothScrollTo(el) {
 function addTag(container, textInput, tagText) {
   const span = document.createElement('span');
   span.className = 'tag tag-finn tag-new';
-  span.textContent = tagText;
+  span.innerHTML = `${tagText}<button onclick="removeTag(this)" style="background:none;border:none;cursor:pointer;font-size:11px;color:#1a7a40;margin-left:4px;padding:0;line-height:1" title="Remove">×</button>`;
   container.insertBefore(span, textInput);
+}
+
+/* ─── ADD USER TAG (purple, dismissible) ─────────────────────── */
+function addRegularTag(container, textInput, tagText) {
+  const span = document.createElement('span');
+  span.className = 'tag tag-new';
+  span.innerHTML = `${tagText}<button onclick="this.closest('.tag').remove()" style="background:none;border:none;cursor:pointer;font-size:11px;color:#4a4ea2;margin-left:4px;padding:0;line-height:1" title="Remove">×</button>`;
+  container.insertBefore(span, textInput);
+}
+
+/* ─── COMMA / ENTER TAG INPUT SETUP ─────────────────────────── */
+function setupTagInput(containerId, textInputId, prefix) {
+  const container = document.getElementById(containerId);
+  const textInput = document.getElementById(textInputId);
+  if (!container || !textInput) return;
+
+  textInput.addEventListener('keydown', function(e) {
+    if (e.key !== ',' && e.key !== 'Enter') return;
+    e.preventDefault();
+    const raw = this.value.trim().replace(/,$/, '');
+    if (!raw) return;
+    const val = (prefix && !raw.startsWith(prefix)) ? prefix + raw : raw;
+    addRegularTag(container, textInput, val);
+    this.value = '';
+  });
+
+  // Clicking the container area focuses the text input
+  container.addEventListener('click', () => textInput.focus());
 }
 
 function toggleInsightsSection(checkbox) {
@@ -1029,8 +1208,42 @@ function counter(btn, dir) {
   input.value = Math.max(0, (parseInt(input.value) || 0) + dir);
 }
 
+/* ─── PASSWORD GATE ───────────────────────────────────────────── */
+function checkPw() {
+  const input = document.getElementById('pw-input');
+  const err   = document.getElementById('pw-err');
+  if (input.value === 'SaaSmagedon') {
+    document.getElementById('pw-gate').classList.add('hidden');
+    input.value = '';
+  } else {
+    input.classList.add('error');
+    err.style.display = 'block';
+    input.addEventListener('animationend', () => input.classList.remove('error'), { once: true });
+    input.select();
+  }
+}
+
+/* ─── AUTO-SAVE ───────────────────────────────────────────────── */
+let saveTimer = null;
+function triggerSave() {
+  const status = document.getElementById('save-status');
+  const label  = document.getElementById('save-label');
+  status.classList.add('saving');
+  label.textContent = 'Saving…';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    status.classList.remove('saving');
+    label.textContent = 'Saved';
+  }, 1500);
+}
+document.addEventListener('input',  triggerSave);
+document.addEventListener('change', triggerSave);
+
 /* ─── INIT ────────────────────────────────────────────────────── */
 render();
+setupTagInput('hashtag-tag-input',  'hashtag-text-input',  '#');
+setupTagInput('mentions-tag-input', 'mentions-text-input', '@');
+setupTagInput('nonneg-tag-input',   'nonneg-text-input',   '');
 </script>
 </body>
 </html>
