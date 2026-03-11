@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brief Creation – Finn Inline Analysis (Alt)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f4f4f5; color: #373b3f; font-size: 16px; line-height: 1.25; }
+
+    /* ── TOP NAV ─────────────────────────────────────────── */
+    .top-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: #fff; height: 64px;
+      box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.15);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 24px;
+    }
+    .nav-left { display: flex; align-items: center; gap: 8px; color: #373b3f; font-size: 14px; }
+    .spinner { width: 20px; height: 20px; border: 2px solid #d2d3d5; border-top-color: #212529; border-radius: 50%; animation: spin .8s linear infinite; }
+    .save-check { font-size: 15px; color: #28a745; font-weight: 700; }
+    #save-status { transition: color .2s; }
+    #save-status.saving { color: #8f9295; }
+    #save-status.saving .save-check { display: none; }
+    #save-status.saving .save-spinner { display: block !important; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .nav-right { display: flex; align-items: center; gap: 8px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: 8px; font-family: inherit; font-size: 16px; font-weight: 600; cursor: pointer; border: none; transition: opacity .15s; }
+    .btn:hover { opacity: .85; }
+    .btn-outline { background: #fff; border: 1.5px solid #212529; color: #212529; }
+    .btn-ghost { background: transparent; color: #212529; border: none; }
+    .btn-dark { background: #212529; color: #fff; }
+    .btn-icon { background: #f4f4f5; color: #212529; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 18px; line-height: 1; }
+    .btn-sm { padding: 8px 14px; font-size: 14px; font-weight: 600; }
+
+    /* ── LAYOUT ──────────────────────────────────────────── */
+    .layout { display: flex; padding-top: 64px; min-height: 100vh; }
+    .sidebar { width: 280px; flex-shrink: 0; padding: 40px 24px; position: sticky; top: 64px; height: calc(100vh - 64px); overflow-y: auto; }
+    .sidebar-title { font-size: 28px; font-weight: 700; color: #212529; letter-spacing: -.5px; line-height: 1.2; margin-bottom: 36px; }
+    .main { flex: 1; padding: 32px 40px 80px 32px; max-width: 800px; }
+
+    /* ── STEPPER ─────────────────────────────────────────── */
+    .steps { display: flex; flex-direction: column; }
+    .step { display: flex; flex-direction: column; cursor: pointer; }
+    .step-row { display: flex; align-items: center; gap: 10px; padding: 2px 0; }
+    .step-icon { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #d2d3d5; background: #fff; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #212529; transition: all .2s; }
+    .step-icon.done { background: #212529; border-color: #212529; color: #fff; }
+    .step-icon.active { background: #fff; border-color: #212529; }
+    .step-icon.active::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #212529; }
+    .step-label { font-size: 15px; font-weight: 600; color: #212529; }
+    .step-label.muted { color: #8f9295; font-weight: 400; }
+    .step-connector { width: 1px; height: 20px; background: #d2d3d5; margin-left: 13px; }
+    .step-connector.done { background: #212529; }
+    .badge { display: inline-flex; align-items: center; background: #373b3f; color: #fff; font-size: 11px; font-weight: 400; padding: 1px 7px; border-radius: 6px; }
+
+    /* ── CARDS ───────────────────────────────────────────── */
+    .card { background: #fff; border: 1px solid #d2d3d5; border-radius: 8px; padding: 24px; margin-bottom: 16px; }
+    .card-title { font-size: 20px; font-weight: 700; color: #212529; margin-bottom: 6px; }
+    .field-label { font-size: 14px; font-weight: 600; color: #373b3f; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+    .required { color: #dc3545; }
+    .input { width: 100%; padding: 10px 14px; border: 1.5px solid #d2d3d5; border-radius: 8px; font-family: inherit; font-size: 15px; color: #373b3f; background: #fff; outline: none; transition: border-color .15s, box-shadow .3s; }
+    .input:focus { border-color: #212529; }
+    .input::placeholder { color: #8f9295; }
+    .textarea { width: 100%; padding: 10px 14px; border: 1.5px solid #d2d3d5; border-radius: 8px; font-family: inherit; font-size: 15px; color: #373b3f; background: #fff; resize: vertical; min-height: 80px; outline: none; transition: border-color .15s, box-shadow .3s; }
+    .textarea:focus { border-color: #212529; }
+
+    /* ── FIELD HIGHLIGHT ANIMATION ───────────────────────── */
+    @keyframes fieldApplied {
+      0%   { box-shadow: 0 0 0 3px rgba(40,167,69,.5); border-color: #28a745; background: #f0fff4; }
+      60%  { box-shadow: 0 0 0 3px rgba(40,167,69,.2); border-color: #28a745; background: #f0fff4; }
+      100% { box-shadow: none; border-color: #d2d3d5; background: #fff; }
+    }
+    .field-applied { animation: fieldApplied 1.8s ease forwards !important; }
+    @keyframes tagPop {
+      0%   { transform: scale(.7); opacity: 0; }
+      60%  { transform: scale(1.1); }
+      100% { transform: scale(1);  opacity: 1; }
+    }
+    .tag-new { animation: tagPop .35s ease forwards; }
+    @keyframes sectionSlideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .slide-in { animation: sectionSlideIn .3s ease forwards; }
+    @keyframes sugSlideDown {
+      from { opacity: 0; transform: translateY(-6px); max-height: 0; }
+      to   { opacity: 1; transform: translateY(0); max-height: 200px; }
+    }
+
+    /* ── RADIO CARDS ─────────────────────────────────────── */
+    .radio-cards { display: flex; gap: 12px; margin-bottom: 16px; }
+    .radio-card { flex: 1; border: 2px solid #d2d3d5; border-radius: 8px; padding: 14px 12px; cursor: pointer; transition: all .15s; display: flex; flex-direction: column; gap: 4px; }
+    .radio-card.selected { border-color: #212529; background: #f4f4f5; }
+    .radio-card .rc-label { font-size: 14px; font-weight: 600; color: #212529; }
+    .radio-card .rc-desc  { font-size: 13px; color: #8f9295; line-height: 1.4; }
+
+    /* ── PLATFORMS ───────────────────────────────────────── */
+    .platforms { display: flex; gap: 8px; margin-bottom: 20px; }
+    .platform-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 8px; border: 1.5px solid #d2d3d5; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; color: #212529; background: #fff; transition: all .15s; }
+    .platform-btn.active { border-color: #212529; background: #f4f4f5; }
+    .platform-btn svg { width: 28px; height: 28px; }
+
+    /* ── COUNTERS ────────────────────────────────────────── */
+    .counter-group { display: flex; gap: 24px; margin-bottom: 16px; }
+    .counter { display: flex; flex-direction: column; gap: 6px; }
+    .counter label { font-size: 14px; font-weight: 600; color: #212529; }
+    .counter-input { display: flex; align-items: center; gap: 4px; }
+    .counter-btn { width: 34px; height: 34px; border-radius: 8px; background: #f4f4f5; border: none; cursor: pointer; font-size: 18px; color: #212529; display: flex; align-items: center; justify-content: center; }
+    .counter-val { width: 60px; text-align: center; padding: 6px 8px; border: 1.5px solid #d2d3d5; border-radius: 8px; font-size: 15px; font-weight: 600; color: #212529; }
+
+    /* ── TOGGLE ──────────────────────────────────────────── */
+    .toggle-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+    .toggle input { display: none; }
+    .toggle-track { position: absolute; inset: 0; border-radius: 11px; background: #d2d3d5; transition: background .2s; cursor: pointer; }
+    .toggle input:checked + .toggle-track { background: #212529; }
+    .toggle-thumb { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.25); transition: transform .2s; pointer-events: none; }
+    .toggle input:checked ~ .toggle-thumb { transform: translateX(18px); }
+    .toggle-label { font-size: 15px; font-weight: 600; color: #373b3f; }
+
+    /* ── TIMELINE ────────────────────────────────────────── */
+    .timeline { display: flex; align-items: flex-start; gap: 0; margin-bottom: 24px; flex-wrap: wrap; }
+    .tl-item { display: flex; flex-direction: column; gap: 2px; min-width: 90px; }
+    .tl-item .tl-name { font-size: 13px; font-weight: 700; color: #373b3f; }
+    .tl-item .tl-week { font-size: 12px; color: #8f9295; }
+    .tl-sep { width: 32px; height: 1px; background: #d2d3d5; margin-top: 10px; flex-shrink: 0; }
+
+    /* ── MISC ────────────────────────────────────────────── */
+    .date-row { display: flex; flex-direction: column; gap: 6px; max-width: 260px; }
+    .date-group { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
+    .seg-btn-group { display: flex; margin-bottom: 20px; }
+    .seg-btn { padding: 10px 20px; font-family: inherit; font-size: 15px; font-weight: 600; border: 1.5px solid #212529; cursor: pointer; transition: all .15s; }
+    .seg-btn:first-child { border-radius: 8px 0 0 8px; }
+    .seg-btn:last-child { border-radius: 0 8px 8px 0; border-left: none; }
+    .seg-btn.active { background: #212529; color: #fff; }
+    .seg-btn:not(.active) { background: #fff; color: #212529; }
+    .section-sep { height: 1px; background: #d2d3d5; margin: 8px 0 20px; }
+    .helper-text { font-size: 13px; color: #8f9295; margin-bottom: 14px; }
+    .tag-input { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; border: 1.5px solid #d2d3d5; border-radius: 8px; padding: 8px 12px; background: #fff; cursor: text; transition: box-shadow .3s; }
+    .tag { background: #e9eafa; color: #4a4ea2; padding: 3px 10px; border-radius: 12px; font-size: 13px; font-weight: 600; }
+    .tag-finn { background: #eafaf1; color: #1a7a40; border: 1px solid #b2dfb2; }
+    .concept-bar { background: #e9eafa; color: #4a4ea2; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+    .radio-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 14px; }
+    .radio-row input { accent-color: #212529; }
+    .alert-info { background: #e6eeff; border: 1px solid #0d6efd; color: #063272; padding: 12px 14px; border-radius: 8px; font-size: 14px; line-height: 1.5; margin-bottom: 16px; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .step-footer { display: flex; justify-content: space-between; align-items: center; padding: 20px 0 0; }
+
+    /* ── FINN PASSIVE HINT ───────────────────────────────── */
+    .finn-hint {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: #a9a6c8; margin-bottom: 18px;
+      letter-spacing: .1px;
+    }
+    .finn-hint-icon { color: #4a4ea2; font-size: 13px; }
+
+    /* ── FINN INLINE SUGGESTION ──────────────────────────── */
+    .finn-inline-sug {
+      display: none;
+      background: #faf9ff;
+      border: 1px solid #e0dff4;
+      border-left: 3px solid #4a4ea2;
+      border-radius: 0 6px 6px 0;
+      padding: 9px 12px;
+      margin-top: 6px;
+      animation: sugSlideDown .2s ease;
+      overflow: hidden;
+    }
+    .finn-inline-sug.visible { display: block; }
+    .finn-inline-sug.resolved {
+      background: #f4fef6;
+      border-color: #b2dfb2;
+      border-left-color: #28a745;
+    }
+
+    .finn-isug-header {
+      display: flex; align-items: center; gap: 7px; margin-bottom: 6px;
+    }
+    .finn-isug-icon { font-size: 13px; color: #fd7e14; flex-shrink: 0; line-height: 1; }
+    .finn-isug-icon.resolved-icon { color: #28a745; }
+    .finn-isug-spark { font-size: 12px; color: #4a4ea2; flex-shrink: 0; }
+    .finn-isug-label { font-size: 11px; font-weight: 700; color: #4a4ea2; letter-spacing: .3px; flex-shrink: 0; }
+    .finn-isug-field { font-size: 13px; font-weight: 700; color: #373b3f; flex: 1; }
+    .finn-isug-dismiss-x {
+      background: none; border: none; cursor: pointer; font-size: 14px;
+      color: #8f9295; padding: 0; line-height: 1; flex-shrink: 0; margin-left: auto;
+    }
+    .finn-isug-dismiss-x:hover { color: #373b3f; }
+
+    .finn-isug-body {
+      font-size: 13px; color: #373b3f; line-height: 1.55;
+      padding-left: 20px;
+    }
+    .finn-isug-actions {
+      display: flex; gap: 8px; margin-top: 9px; padding-left: 20px;
+    }
+    .sug-apply {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 12px; background: #212529; color: #fff; border: none;
+      border-radius: 6px; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    .sug-apply:hover { opacity: .85; }
+    .sug-dismiss {
+      padding: 5px 12px; background: transparent; color: #8f9295;
+      border: 1px solid #d2d3d5; border-radius: 6px;
+      font-family: inherit; font-size: 12px; cursor: pointer;
+    }
+    .sug-dismiss:hover { border-color: #8f9295; }
+
+    .finn-applied-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #eafaf1; color: #1a7a40; border: 1px solid #b2dfb2;
+      font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+      margin-top: 8px; margin-left: 20px;
+    }
+
+    .card { position: relative; }
+
+    /* Questions block (Targeting step) */
+    .questions-block { margin-top: 16px; display: none; }
+    .questions-block.visible { display: block; }
+    .q-item { border: 1px solid #d2d3d5; border-radius: 8px; padding: 14px; margin-bottom: 10px; background: #fff; }
+    .q-item label { font-size: 13px; font-weight: 700; color: #212529; display: block; margin-bottom: 8px; }
+    .q-option { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 6px; }
+    .q-option input { accent-color: #212529; }
+
+    /* ── PASSWORD GATE ───────────────────────────────────── */
+    #pw-gate {
+      position: fixed; inset: 0; z-index: 9999;
+      background: #f4f4f5;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #pw-gate.hidden { display: none; }
+    .pw-box {
+      background: #fff; border: 1px solid #d2d3d5; border-radius: 12px;
+      padding: 40px 36px; width: 340px; text-align: center;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+    }
+    .pw-logo { font-size: 28px; font-weight: 700; color: #212529; margin-bottom: 6px; }
+    .pw-sub  { font-size: 14px; color: #8f9295; margin-bottom: 24px; }
+    .pw-input {
+      width: 100%; padding: 11px 14px; border: 1.5px solid #d2d3d5; border-radius: 8px;
+      font-family: inherit; font-size: 15px; outline: none; margin-bottom: 12px;
+      transition: border-color .15s;
+    }
+    .pw-input:focus { border-color: #212529; }
+    .pw-input.error { border-color: #dc3545; animation: shake .3s ease; }
+    .pw-btn {
+      width: 100%; padding: 12px; background: #212529; color: #fff;
+      border: none; border-radius: 8px; font-family: inherit;
+      font-size: 15px; font-weight: 600; cursor: pointer;
+    }
+    .pw-btn:hover { opacity: .85; }
+    .pw-err { font-size: 13px; color: #dc3545; margin-top: 10px; display: none; }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      25%      { transform: translateX(-6px); }
+      75%      { transform: translateX(6px); }
+    }
+
+    /* ── SUCCESS PAGE ────────────────────────────────────── */
+    .success-page { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 16px; text-align: center; }
+    .success-icon { font-size: 64px; }
+    .success-title { font-size: 28px; font-weight: 700; color: #212529; }
+    .success-sub { font-size: 16px; color: #8f9295; max-width: 400px; }
+  </style>
+</head>
+<body>
+
+<!-- PASSWORD GATE -->
+<div id="pw-gate">
+  <div class="pw-box">
+    <div class="pw-logo">Finn Brief</div>
+    <div class="pw-sub">Enter the password to access this prototype</div>
+    <input id="pw-input" class="pw-input" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')checkPw()" autofocus />
+    <button class="pw-btn" onclick="checkPw()">Continue →</button>
+    <div class="pw-err" id="pw-err">Incorrect password. Try again.</div>
+  </div>
+</div>
+
+<!-- TOP NAV -->
+<nav class="top-nav">
+  <div class="nav-left" id="save-status">
+    <span class="save-check">✓</span>
+    <span class="save-spinner spinner" style="display:none"></span>
+    <span id="save-label">Saved</span>
+  </div>
+  <div class="nav-right">
+    <button class="btn btn-outline btn-sm" onclick="prevStep()">← Previous</button>
+    <button id="next-btn" class="btn btn-dark btn-sm" onclick="nextStep()">Continue →</button>
+    <button class="btn-icon" title="Close">✕</button>
+  </div>
+</nav>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-title">Influencer Partnership Brief</div>
+    <div class="steps" id="steps-nav"></div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- ══ STEP 1: Products for Brief ══════════════════════ -->
+    <div class="page active" id="page-0">
+
+      <p class="finn-hint"><span class="finn-hint-icon">✦</span> Finn will flag suggestions as you fill out this step</p>
+
+      <div class="card">
+        <div class="card-title">Brief name <span class="required">*</span></div>
+        <div style="margin-top:12px">
+          <input class="input" type="text" placeholder="Enter your brief name" />
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">How will the Creator receive the product(s)?</div>
+        <div class="radio-cards" style="margin-top:14px">
+          <div class="radio-card selected" onclick="selectCard(this)">
+            <div class="rc-label">📦 Product(s) will be shipped</div>
+            <div class="rc-desc">Use this option if sending products to the Creator via your warehouse.</div>
+          </div>
+          <div class="radio-card" onclick="selectCard(this)">
+            <div class="rc-label">🛒 Creator will purchase directly</div>
+            <div class="rc-desc">Use this option if you want Creator to buy your product at a specific store or website.</div>
+          </div>
+        </div>
+        <div style="background:#f9f9f9;border:1px solid #e0e0e0;border-radius:8px;padding:16px;margin-top:4px">
+          <div class="field-label">Choose shipping method <span class="required">*</span></div>
+          <div class="radio-row"><input type="radio" name="ship" checked /> Shopify integration</div>
+          <div class="radio-row"><input type="radio" name="ship" /> Add products manually</div>
+          <div class="helper-text" style="margin-top:6px">With Cohley's Shopify integration, we'll automate creator product shipping and tracking.</div>
+          <button class="btn btn-outline btn-sm" style="margin-top:8px">+ Add product</button>
+        </div>
+      </div>
+
+      <div class="card" id="card-product-usage">
+        <div class="card-title">Explain how to use the product(s). <span style="color:#8f9295;font-weight:400;font-size:16px">— Optional</span></div>
+        <div class="helper-text" style="margin-top:8px">Provide key details such as usage instructions, unique features, and correct pronunciation.</div>
+        <textarea class="textarea" id="product-usage-textarea" placeholder="Add written details, audio, or imagery." rows="4"></textarea>
+        <!-- FINN INLINE: product usage -->
+        <div class="finn-inline-sug" id="finn-0-s0">
+          <div class="finn-isug-header">
+            <span class="finn-isug-spark">✦</span>
+            <span class="finn-isug-label">FINN</span>
+            <span class="finn-isug-icon" id="finn-0-s0-icon">⚠</span>
+            <span class="finn-isug-field">Explain how to use the product(s)</span>
+            <button class="finn-isug-dismiss-x" onclick="dismissSuggestion('finn-0-s0')" title="Dismiss">✕</button>
+          </div>
+          <div class="finn-isug-body">Creators are receiving 5 products but no instructions are provided on how to best use them together. Adding usage guidance will improve content quality significantly.</div>
+          <div class="finn-isug-actions" id="finn-0-s0-actions">
+            <button class="sug-apply" onclick="applySuggestion('finn-0-s0')">✦ Apply suggestion</button>
+            <button class="sug-dismiss" onclick="dismissSuggestion('finn-0-s0')">Dismiss</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-footer">
+        <span></span>
+        <button class="btn btn-dark" onclick="nextStep()">Continue →</button>
+      </div>
+    </div><!-- /page-0 -->
+
+    <!-- ══ STEP 2: Deliverables ════════════════════════════ -->
+    <div class="page" id="page-1">
+
+      <p class="finn-hint"><span class="finn-hint-icon">✦</span> Finn will flag suggestions as you fill out this step</p>
+
+      <div class="card">
+        <div class="card-title">Platform Selection <span class="required">*</span></div>
+        <div class="platforms" style="margin-top:14px">
+          <button class="platform-btn active" onclick="selPlatform(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="1.8"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="#e1306c" stroke="none"/></svg>
+            Instagram
+          </button>
+          <button class="platform-btn" onclick="selPlatform(this)">
+            <svg viewBox="0 0 24 24" fill="#1877f2"><path d="M24 12.07C24 5.41 18.63 0 12 0S0 5.41 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.04V9.41c0-3.02 1.8-4.7 4.54-4.7 1.31 0 2.69.24 2.69.24v2.97h-1.52c-1.49 0-1.96.93-1.96 1.89v2.26h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07z"/></svg>
+            Facebook
+          </button>
+          <button class="platform-btn" onclick="selPlatform(this)">
+            <svg viewBox="0 0 24 24" fill="#000"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V9.05a8.27 8.27 0 004.84 1.55V7.15a4.85 4.85 0 01-1.07-.46z"/></svg>
+            TikTok
+          </button>
+          <button class="platform-btn" onclick="selPlatform(this)">
+            <svg viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.19a3.02 3.02 0 00-2.12-2.14C19.55 3.5 12 3.5 12 3.5s-7.55 0-9.38.55A3.02 3.02 0 00.5 6.19C0 8.03 0 12 0 12s0 3.97.5 5.81A3.02 3.02 0 002.62 19.96C4.45 20.5 12 20.5 12 20.5s7.55 0 9.38-.54a3.02 3.02 0 002.12-2.15C24 15.97 24 12 24 12s0-3.97-.5-5.81zM9.75 15.5V8.5l6.25 3.5-6.25 3.5z"/></svg>
+            YouTube
+          </button>
+          <button class="platform-btn" onclick="selPlatform(this)">
+            <svg viewBox="0 0 24 24" stroke="#8f9295" stroke-width="1.5" fill="none"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10" stroke-linecap="round"/></svg>
+            Other
+          </button>
+        </div>
+
+        <div class="toggle-row">
+          <label class="toggle"><input type="checkbox"/><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-label" style="font-weight:400;font-size:14px">Ask creators permission to boost content via spark code or brand partnership?</span>
+        </div>
+
+        <div class="section-sep"></div>
+        <div class="field-label">Deliverables <span class="required">*</span></div>
+        <div class="helper-text">Each Creator will post the same number of content for each concept they choose.</div>
+        <div class="counter-group">
+          <div class="counter"><label>Reel</label><div class="counter-input"><button class="counter-btn" onclick="counter(this,-1)">−</button><input class="counter-val" type="number" value="0" min="0" /><button class="counter-btn" onclick="counter(this,1)">+</button></div></div>
+          <div class="counter"><label>Post</label><div class="counter-input"><button class="counter-btn" onclick="counter(this,-1)">−</button><input class="counter-val" type="number" value="0" min="0" /><button class="counter-btn" onclick="counter(this,1)">+</button></div></div>
+          <div class="counter"><label>Story</label><div class="counter-input"><button class="counter-btn" onclick="counter(this,-1)">−</button><input class="counter-val" type="number" value="0" min="0" /><button class="counter-btn" onclick="counter(this,1)">+</button></div></div>
+        </div>
+
+        <div class="field-label">Concepts <span class="required">*</span></div>
+        <div style="background:#f9f9f9;border:1px solid #e0e0e0;border-radius:8px;padding:16px;margin-bottom:8px">
+          <div class="concept-bar">Concept 1 <span style="font-weight:400;font-size:12px;color:#8f9295">▲</span></div>
+          <div style="margin-bottom:12px">
+            <div class="field-label">Concept title <span class="required">*</span></div>
+            <input class="input" type="text" placeholder="Add title" />
+          </div>
+          <div class="field-label">Concept description <span class="required">*</span></div>
+          <textarea class="textarea" placeholder="i.e. Show us how you create a range of looks depending on your mood…"></textarea>
+        </div>
+        <button class="btn btn-outline btn-sm">+ Add Concept</button>
+      </div>
+
+      <div class="card">
+        <div class="field-label">#Hashtags</div>
+        <div class="helper-text">Type a hashtag and press <strong>comma</strong> or <strong>Enter</strong> to add it.</div>
+        <div class="tag-input" id="hashtag-tag-input">
+          <span class="tag">#skincare</span>
+          <input id="hashtag-text-input" type="text" style="border:none;outline:none;font-size:14px;flex:1;min-width:80px" placeholder="Add hashtag…" />
+        </div>
+        <!-- FINN INLINE: hashtags -->
+        <div class="finn-inline-sug" id="finn-1-s0">
+          <div class="finn-isug-header">
+            <span class="finn-isug-spark">✦</span>
+            <span class="finn-isug-label">FINN</span>
+            <span class="finn-isug-icon" id="finn-1-s0-icon">⚠</span>
+            <span class="finn-isug-field">Hashtags</span>
+            <button class="finn-isug-dismiss-x" onclick="dismissSuggestion('finn-1-s0')" title="Dismiss">✕</button>
+          </div>
+          <div class="finn-isug-body">Add these trending hashtags to improve discoverability: <strong>#SkinTok</strong> (243M views), <strong>#CleanBeauty</strong> (89M views), <strong>#SelfCareSunday</strong> (56M views), <strong>#GlowUp</strong> (178M views), <strong>#Company-name</strong> (from your brand guidelines).</div>
+          <div class="finn-isug-actions" id="finn-1-s0-actions">
+            <button class="sug-apply" onclick="applySuggestion('finn-1-s0')">✦ Apply suggestion</button>
+            <button class="sug-dismiss" onclick="dismissSuggestion('finn-1-s0')">Dismiss</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="field-label">@Mentions</div>
+        <div class="helper-text">Type an account and press <strong>comma</strong> or <strong>Enter</strong> to add it.</div>
+        <div class="tag-input" id="mentions-tag-input">
+          <input id="mentions-text-input" type="text" style="border:none;outline:none;font-size:14px;flex:1;min-width:80px" placeholder="@brandname…" />
+        </div>
+        <!-- FINN INLINE: mentions -->
+        <div class="finn-inline-sug" id="finn-1-s1">
+          <div class="finn-isug-header">
+            <span class="finn-isug-spark">✦</span>
+            <span class="finn-isug-label">FINN</span>
+            <span class="finn-isug-icon" id="finn-1-s1-icon">⚠</span>
+            <span class="finn-isug-field">Mentions</span>
+            <button class="finn-isug-dismiss-x" onclick="dismissSuggestion('finn-1-s1')" title="Dismiss">✕</button>
+          </div>
+          <div class="finn-isug-body">Your brand guidelines include <strong>@Company-name</strong> as a required mention. Add it so creators know to tag the official account in their post.</div>
+          <div class="finn-isug-actions" id="finn-1-s1-actions">
+            <button class="sug-apply" onclick="applySuggestion('finn-1-s1')">✦ Apply suggestion</button>
+            <button class="sug-dismiss" onclick="dismissSuggestion('finn-1-s1')">Dismiss</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="field-label">Caption</div>
+        <div class="helper-text">Have direction for the creators to include in their caption?</div>
+        <textarea class="textarea" placeholder="Add caption guidance here…"></textarea>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Create your style guide <span class="required">*</span></div>
+        <div class="helper-text" style="margin-top:8px">Provide an example asset by uploading from your device or adding a URL.</div>
+        <div style="border:2px dashed #d2d3d5;border-radius:8px;padding:36px 24px;text-align:center;color:#8f9295;font-size:14px;">
+          🖼 Drag and drop example image or video or <span style="color:#0d6efd;cursor:pointer">click to browse</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Content non-negotiables <span class="required">*</span></div>
+        <div class="alert-info" style="margin-top:12px">List essential guidelines here. Finn will check each submitted asset for compliance upon Creator upload.</div>
+        <div class="helper-text">Type a guideline and press <strong>comma</strong> or <strong>Enter</strong> to add it.</div>
+        <div class="tag-input" id="nonneg-tag-input" style="flex-wrap:wrap">
+          <input id="nonneg-text-input" type="text" style="border:none;outline:none;font-size:14px;flex:1;min-width:120px" placeholder="i.e. Bright lighting…" />
+        </div>
+        <!-- FINN INLINE: content non-negotiables -->
+        <div class="finn-inline-sug" id="finn-1-s2">
+          <div class="finn-isug-header">
+            <span class="finn-isug-spark">✦</span>
+            <span class="finn-isug-label">FINN</span>
+            <span class="finn-isug-icon" id="finn-1-s2-icon">⚠</span>
+            <span class="finn-isug-field">Content non-negotiables <span style="font-size:11px;font-weight:400;color:#dc3545;margin-left:4px">Required</span></span>
+            <button class="finn-isug-dismiss-x" onclick="dismissSuggestion('finn-1-s2')" title="Dismiss">✕</button>
+          </div>
+          <div class="finn-isug-body">No content guidelines have been added — this is a required field. Based on your brand, we suggest: <strong>Bright natural lighting</strong>, <strong>Product clearly visible</strong>, <strong>No competitor products in frame</strong>, <strong>Show full routine</strong>.</div>
+          <div class="finn-isug-actions" id="finn-1-s2-actions">
+            <button class="sug-apply" onclick="applySuggestion('finn-1-s2')">✦ Add guidelines</button>
+            <button class="sug-dismiss" onclick="dismissSuggestion('finn-1-s2')">Dismiss</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-footer">
+        <button class="btn btn-ghost" onclick="prevStep()">← Previous</button>
+        <button class="btn btn-dark" onclick="nextStep()">Continue →</button>
+      </div>
+    </div><!-- /page-1 -->
+
+    <!-- ══ STEP 3: Payment & Deadlines ════════════════════ -->
+    <div class="page" id="page-2">
+
+      <p class="finn-hint"><span class="finn-hint-icon">✦</span> Finn will flag suggestions as you fill out this step</p>
+
+      <div class="card">
+        <div class="card-title">📅 Deadlines</div>
+        <div class="timeline" style="margin:16px 0 20px">
+          <div class="tl-item"><span class="tl-name">Launch Brief</span><span class="tl-week">Week 1</span></div>
+          <div class="tl-sep"></div>
+          <div class="tl-item"><span class="tl-name">Accept applicants</span><span class="tl-week">Week 2</span></div>
+          <div class="tl-sep"></div>
+          <div class="tl-item"><span class="tl-name">Ship products</span><span class="tl-week">Week 3</span></div>
+          <div class="tl-sep"></div>
+          <div class="tl-item"><span class="tl-name">Receive content</span><span class="tl-week">Week 4</span></div>
+          <div class="tl-sep"></div>
+          <div class="tl-item"><span class="tl-name">Post content</span><span class="tl-week">Week 5</span></div>
+        </div>
+        <div class="date-group">
+          <div class="date-row">
+            <div class="field-label">Deadline for applications <span class="required">*</span></div>
+            <input class="input" id="deadline-applications-input" type="date" />
+            <!-- FINN INLINE: application deadline -->
+            <div class="finn-inline-sug" id="finn-2-s0" style="max-width:100%">
+              <div class="finn-isug-header">
+                <span class="finn-isug-spark">✦</span>
+                <span class="finn-isug-label">FINN</span>
+                <span class="finn-isug-icon" id="finn-2-s0-icon">⚠</span>
+                <span class="finn-isug-field">Application deadline</span>
+                <button class="finn-isug-dismiss-x" onclick="dismissSuggestion('finn-2-s0')" title="Dismiss">✕</button>
+              </div>
+              <div class="finn-isug-body">With today's date, creators would only have <strong>1 day</strong> to apply. Cohley recommends at least <strong>3 days</strong> to attract quality applicants.</div>
+              <div class="finn-isug-actions" id="finn-2-s0-actions">
+                <button class="sug-apply" onclick="applySuggestion('finn-2-s0')">✦ Extend to 3 days</button>
+                <button class="sug-dismiss" onclick="dismissSuggestion('finn-2-s0')">Dismiss</button>
+              </div>
+            </div>
+          </div>
+          <div class="date-row">
+            <div class="field-label">Ship products <span class="required">*</span></div>
+            <input class="input" type="date" />
+          </div>
+          <div class="date-row">
+            <div class="field-label">Receive content <span class="required">*</span></div>
+            <input class="input" type="date" />
+          </div>
+          <div class="date-row">
+            <div class="field-label">Post content <span class="required">*</span></div>
+            <div class="radio-row" style="margin-bottom:8px">
+              <input type="radio" name="postdate" checked /> Specific date
+              <input type="radio" name="postdate" style="margin-left:16px" /> Across a date range
+            </div>
+            <input class="input" type="date" />
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">$ Creator compensation</div>
+        <div class="seg-btn-group" style="margin-top:16px">
+          <button class="seg-btn active" onclick="selSeg(this)">Payment</button>
+          <button class="seg-btn" onclick="selSeg(this)">Product only</button>
+        </div>
+        <div class="field-label">Compensation structure</div>
+        <div style="display:flex;gap:20px;margin:8px 0 16px">
+          <div class="radio-row"><input type="radio" name="comp" checked /> Flat rate</div>
+          <div class="radio-row"><input type="radio" name="comp" /> Tiered by followers</div>
+          <div class="radio-row"><input type="radio" name="comp" /> Negotiate</div>
+        </div>
+        <div class="date-row" style="max-width:220px">
+          <div class="field-label">Each creator will be paid <span class="required">*</span></div>
+          <input class="input" id="compensation-amount-input" type="number" placeholder="$ 0.00" />
+        </div>
+        <!-- FINN INLINE: creator compensation -->
+        <div class="finn-inline-sug" id="finn-2-s1" style="max-width:340px">
+          <div class="finn-isug-header">
+            <span class="finn-isug-spark">✦</span>
+            <span class="finn-isug-label">FINN</span>
+            <span class="finn-isug-icon" id="finn-2-s1-icon">⚠</span>
+            <span class="finn-isug-field">Creator compensation</span>
+            <button class="finn-isug-dismiss-x" onclick="dismissSuggestion('finn-2-s1')" title="Dismiss">✕</button>
+          </div>
+          <div class="finn-isug-body">You set <strong>$200</strong> for 2 reels + 1 post. Cohley benchmarks suggest <strong>$500</strong> — low compensation risks fewer quality applications.</div>
+          <div class="finn-isug-actions" id="finn-2-s1-actions">
+            <button class="sug-apply" onclick="applySuggestion('finn-2-s1')">✦ Update to $500</button>
+            <button class="sug-dismiss" onclick="dismissSuggestion('finn-2-s1')">Dismiss</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="field-label">Additional legal Terms and Conditions <span class="required">*</span></div>
+        <div style="display:flex;gap:20px;margin:10px 0 14px">
+          <div class="radio-row"><input type="radio" name="tnc" checked /> Default Terms and Conditions</div>
+          <div class="radio-row"><input type="radio" name="tnc" /> Add from Company Materials</div>
+        </div>
+        <textarea class="textarea" style="min-height:90px">All content must be uploaded in Cohley and posted by outlined brief deadlines in order to be considered for compensation and future collaborations.</textarea>
+        <div style="font-size:12px;color:#8f9295;margin-top:6px">All Creators must agree to <span style="color:#0d6efd;text-decoration:underline;cursor:pointer">Cohley Terms and Conditions</span> in order to apply.</div>
+      </div>
+
+      <div class="step-footer">
+        <button class="btn btn-ghost" onclick="prevStep()">← Previous</button>
+        <button class="btn btn-dark" onclick="nextStep()">Continue →</button>
+      </div>
+    </div><!-- /page-2 -->
+
+    <!-- ══ STEP 4: Creator Targeting ══════════════════════ -->
+    <div class="page" id="page-3">
+
+      <p class="finn-hint"><span class="finn-hint-icon">✦</span> Finn will flag suggestions as you fill out this step</p>
+
+      <div class="card">
+        <div class="radio-cards" style="margin-bottom:0">
+          <div class="radio-card selected" onclick="selectCard(this)">
+            <div style="font-size:24px;margin-bottom:4px">👥</div>
+            <div class="rc-label">Public</div>
+            <div class="rc-desc">All Creators may apply</div>
+          </div>
+          <div class="radio-card" onclick="selectCard(this)">
+            <div style="font-size:24px;margin-bottom:4px">❤️</div>
+            <div class="rc-label">Private brief</div>
+            <div class="rc-desc">Hand select Creators from the Creator Hub</div>
+          </div>
+          <div class="radio-card" onclick="selectCard(this)">
+            <div style="font-size:24px;margin-bottom:4px">⚙️</div>
+            <div class="rc-label">Creator criteria</div>
+            <div class="rc-desc">Limit who can apply based on demographics</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="toggle-row">
+          <label class="toggle"><input type="checkbox"/><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-label">Enable brief screening ❓</span>
+        </div>
+        <div class="helper-text">Block Creators from reading the brief if they don't meet screening requirements.</div>
+      </div>
+
+      <div class="card" id="card-creator-insights">
+        <div class="toggle-row">
+          <label class="toggle">
+            <input type="checkbox" id="creator-insights-toggle" onchange="toggleInsightsSection(this)" />
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+          <span class="toggle-label">Add custom Creator insights ❓</span>
+        </div>
+        <div class="helper-text">Survey questions can be added to the brief application to help cast the best Creators.</div>
+
+        <!-- FINN INLINE: creator insights -->
+        <div class="finn-inline-sug" id="finn-3-s0">
+          <div class="finn-isug-header">
+            <span class="finn-isug-spark">✦</span>
+            <span class="finn-isug-label">FINN</span>
+            <span class="finn-isug-icon" id="finn-3-s0-icon">⚠</span>
+            <span class="finn-isug-field">Additional Brief Questions</span>
+            <button class="finn-isug-dismiss-x" onclick="dismissSuggestion('finn-3-s0')" title="Dismiss">✕</button>
+          </div>
+          <div class="finn-isug-body">
+            Based on your brand guidelines, we suggest adding 2 Creator insights questions to improve casting quality:<br/>
+            • <strong>Multiple choice:</strong> Do you have experience with skincare routines?<br/>
+            • <strong>Short answer:</strong> Describe your current skincare routine…
+          </div>
+          <div class="finn-isug-actions" id="finn-3-s0-actions">
+            <button class="sug-apply" onclick="applySuggestion('finn-3-s0')">✦ Add questions</button>
+            <button class="sug-dismiss" onclick="dismissSuggestion('finn-3-s0')">Dismiss</button>
+          </div>
+        </div>
+
+        <!-- Questions section shown when toggle is on or Finn applies -->
+        <div class="questions-block" id="creator-insights-questions">
+          <div class="q-item">
+            <label>Q1 — Multiple choice: Do you have experience with skincare routines?</label>
+            <div class="q-option"><input type="checkbox" /> Yes, daily routine</div>
+            <div class="q-option"><input type="checkbox" /> Yes, occasionally</div>
+            <div class="q-option"><input type="checkbox" /> No experience</div>
+            <div class="q-option"><input type="checkbox" /> Currently learning</div>
+          </div>
+          <div class="q-item">
+            <label>Q2 — Short answer: Describe your current skincare routine</label>
+            <textarea class="textarea" style="min-height:60px" placeholder="Creators will answer this when applying…"></textarea>
+          </div>
+          <button class="btn btn-outline btn-sm" style="margin-top:4px">+ Add question</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="toggle-row">
+          <label class="toggle"><input type="checkbox" checked/><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          <span class="toggle-label">Request a visual sample from the Creator</span>
+        </div>
+        <div class="helper-text">Select the sample type you'd like to request from the Creator.</div>
+      </div>
+
+      <div class="step-footer">
+        <button class="btn btn-ghost" onclick="prevStep()">← Previous</button>
+        <button class="btn btn-dark" onclick="nextStep()">🚀 Launch Brief</button>
+      </div>
+    </div><!-- /page-3 -->
+
+    <!-- ══ SUCCESS PAGE ════════════════════════════════════ -->
+    <div class="page" id="page-4">
+      <div class="success-page">
+        <div class="success-icon">🎉</div>
+        <div class="success-title">Brief Launched!</div>
+        <div class="success-sub">Your Influencer Partnership Brief is live. Creators can now apply.</div>
+        <button class="btn btn-dark" style="margin-top:8px" onclick="currentStep=0;render()">Start a new brief</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+/* ─── STATE ───────────────────────────────────────────────────── */
+let currentStep = 0;
+
+const STEPS = [
+  { label: 'Products for Brief' },
+  { label: 'Deliverables' },
+  { label: 'Payment and Deadlines' },
+  { label: 'Creator Targeting' },
+];
+
+const finnState = {
+  0: { resolved: new Set(), dismissed: new Set(), suggestions: ['finn-0-s0'] },
+  1: { resolved: new Set(), dismissed: new Set(), suggestions: ['finn-1-s0', 'finn-1-s1', 'finn-1-s2'] },
+  2: { resolved: new Set(), dismissed: new Set(), suggestions: ['finn-2-s0', 'finn-2-s1'] },
+  3: { resolved: new Set(), dismissed: new Set(), suggestions: ['finn-3-s0'] },
+};
+
+const SUGGESTION_LABELS = {
+  'finn-0-s0': '✦ Apply suggestion',
+  'finn-1-s0': '✦ Apply suggestion',
+  'finn-1-s1': '✦ Apply suggestion',
+  'finn-2-s0': '✦ Extend to 3 days',
+  'finn-2-s1': '✦ Update to $500',
+  'finn-1-s2': '✦ Add guidelines',
+  'finn-3-s0': '✦ Add questions',
+};
+
+const appliedWatchers = new Set();
+
+/* ─── SIDEBAR RENDER ──────────────────────────────────────────── */
+function render() {
+  const nav = document.getElementById('steps-nav');
+  nav.innerHTML = '';
+  STEPS.forEach((s, i) => {
+    const isLast = i === STEPS.length - 1;
+    const done   = i < currentStep;
+    const active = i === currentStep;
+    const step   = document.createElement('div');
+    step.className = 'step';
+    step.onclick = () => { currentStep = i; render(); onStepEnter(i); };
+
+    const row  = document.createElement('div');
+    row.className = 'step-row';
+    const icon = document.createElement('div');
+    icon.className = 'step-icon' + (done ? ' done' : active ? ' active' : '');
+    if (done) icon.innerHTML = '✓';
+    row.appendChild(icon);
+    const lbl = document.createElement('div');
+    lbl.className = 'step-label' + (!done && !active ? ' muted' : '');
+    lbl.textContent = s.label;
+    row.appendChild(lbl);
+    step.appendChild(row);
+
+    if (!isLast) {
+      const conn = document.createElement('div');
+      conn.className = 'step-connector' + (done ? ' done' : '');
+      step.appendChild(conn);
+    }
+    nav.appendChild(step);
+  });
+
+  document.querySelectorAll('.page').forEach((p, i) => p.classList.toggle('active', i === currentStep));
+
+  const nb = document.getElementById('next-btn');
+  if (currentStep >= STEPS.length)        nb.textContent = '✕ Close';
+  else if (currentStep === STEPS.length - 1) nb.textContent = '🚀 Launch Brief';
+  else nb.textContent = 'Continue →';
+}
+function nextStep() { if (currentStep < STEPS.length) { currentStep++; render(); onStepEnter(currentStep); scrollTo(0, 64); } }
+function prevStep() { if (currentStep > 0) { currentStep--; render(); onStepEnter(currentStep); scrollTo(0, 64); } }
+
+/* ─── ON STEP ENTER ───────────────────────────────────────────── */
+// Step 3 (Creator Targeting) has a proactive suggestion — show it
+// automatically after a short delay, like Finn noticing no questions yet.
+let _step3Timer = null;
+function onStepEnter(idx) {
+  if (idx === 3) {
+    clearTimeout(_step3Timer);
+    _step3Timer = setTimeout(() => showFinnSug('finn-3-s0'), 1800);
+  } else {
+    clearTimeout(_step3Timer);
+  }
+}
+
+/* ─── FINN: AUTO-TRIGGER HELPERS ──────────────────────────────── */
+function showFinnSug(id) {
+  const idx = parseInt(id.split('-')[1]);
+  const state = finnState[idx];
+  if (state.dismissed.has(id) || state.resolved.has(id)) return;
+  const el = document.getElementById(id);
+  if (el && !el.classList.contains('visible')) el.classList.add('visible');
+}
+
+function hideFinnSug(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('visible');
+}
+
+function debounce(fn, ms) {
+  let t; return function(...a) { clearTimeout(t); t = setTimeout(() => fn.apply(this, a), ms); };
+}
+
+/* ─── FINN: SETUP AUTO-TRIGGERS ───────────────────────────────── */
+function setupFinnAutoTriggers() {
+
+  // ── Step 0: Products ─────────────────────────────────────────
+  // Product usage textarea: suggest if left blank on blur
+  const productUsageTa = document.getElementById('product-usage-textarea');
+  if (productUsageTa) {
+    productUsageTa.addEventListener('blur', () => {
+      if (!productUsageTa.value.trim()) showFinnSug('finn-0-s0');
+    });
+    productUsageTa.addEventListener('input', () => {
+      if (productUsageTa.value.trim()) hideFinnSug('finn-0-s0');
+    });
+  }
+
+  // ── Step 1: Deliverables ─────────────────────────────────────
+  // Hashtags: suggest on blur if fewer than 3 tags
+  const hashtagInput = document.getElementById('hashtag-text-input');
+  const hashtagContainer = document.getElementById('hashtag-tag-input');
+  if (hashtagInput) {
+    hashtagInput.addEventListener('blur', () => {
+      if (hashtagContainer.querySelectorAll('.tag').length < 3) showFinnSug('finn-1-s0');
+    });
+  }
+
+  // Mentions: suggest on blur if @Company-name is missing
+  const mentionsInput = document.getElementById('mentions-text-input');
+  const mentionsContainer = document.getElementById('mentions-tag-input');
+  if (mentionsInput) {
+    mentionsInput.addEventListener('blur', () => {
+      const tags = [...mentionsContainer.querySelectorAll('.tag')].map(t => t.textContent.replace('×','').trim());
+      if (!tags.includes('@Company-name')) showFinnSug('finn-1-s1');
+    });
+  }
+
+  // Content non-negotiables: suggest on blur if no tags added (it's required)
+  const nonnegInput = document.getElementById('nonneg-text-input');
+  const nonnegContainer = document.getElementById('nonneg-tag-input');
+  if (nonnegInput) {
+    nonnegInput.addEventListener('blur', () => {
+      if (nonnegContainer.querySelectorAll('.tag').length === 0) showFinnSug('finn-1-s2');
+    });
+  }
+
+  // ── Step 2: Payment & Deadlines ──────────────────────────────
+  // Application deadline: suggest immediately on change if < 3 days out
+  const deadlineInput = document.getElementById('deadline-applications-input');
+  if (deadlineInput) {
+    deadlineInput.addEventListener('change', () => {
+      if (!deadlineInput.value) return;
+      const selected = new Date(deadlineInput.value + 'T00:00:00');
+      const today = new Date(); today.setHours(0,0,0,0);
+      const diffDays = Math.round((selected - today) / 86400000);
+      if (diffDays < 3) showFinnSug('finn-2-s0');
+      else hideFinnSug('finn-2-s0');
+    });
+  }
+
+  // Compensation: suggest on blur/input if below $500 benchmark
+  const compInput = document.getElementById('compensation-amount-input');
+  if (compInput) {
+    const checkComp = () => {
+      const val = parseFloat(compInput.value);
+      if (val > 0 && val < 500) showFinnSug('finn-2-s1');
+      else if (val >= 500) hideFinnSug('finn-2-s1');
+    };
+    compInput.addEventListener('blur', checkComp);
+    compInput.addEventListener('input', debounce(checkComp, 500));
+  }
+
+  // ── Step 3: Creator Targeting ─────────────────────────────────
+  // finn-3-s0 is proactive — triggered via onStepEnter(3) with a delay
+}
+
+/* ─── APPLY SUGGESTION ────────────────────────────────────────── */
+function applySuggestion(id) {
+  const parts = id.split('-');
+  const idx   = parseInt(parts[1]);
+
+  switch (id) {
+    case 'finn-0-s0': {
+      const ta = document.getElementById('product-usage-textarea');
+      ta.value = 'Start with the Daily Cleanser (Step 1), followed by the Hydrating Toner (Step 2). Apply the Vitamin C Serum (Step 3) to damp skin, then moisturise with the Repair Cream (Step 4). Finish with the SPF 50 Sunscreen (Step 5) every morning. Products work best when layered within 60 seconds on damp skin. Avoid mixing Step 3 with Step 4 at night — use the Repair Cream alone for best overnight results.';
+      flashField(ta);
+      addFieldWatcher('finn-0-s0', 0, () => ta.addEventListener('input', () => unresolve('finn-0-s0', 0)));
+      break;
+    }
+    case 'finn-1-s0': {
+      const container = document.getElementById('hashtag-tag-input');
+      const textInput = document.getElementById('hashtag-text-input');
+      const tags = ['#SkinTok', '#CleanBeauty', '#SelfCareSunday', '#GlowUp', '#Company-name'];
+      const existing = [...container.querySelectorAll('.tag')].map(t => t.textContent.trim());
+      tags.forEach(tag => { if (!existing.includes(tag)) addTag(container, textInput, tag); });
+      flashField(container);
+      break;
+    }
+    case 'finn-1-s1': {
+      const container = document.getElementById('mentions-tag-input');
+      const textInput = document.getElementById('mentions-text-input');
+      const existing = [...container.querySelectorAll('.tag')].map(t => t.textContent.replace('×','').trim());
+      if (!existing.includes('@Company-name')) addTag(container, textInput, '@Company-name');
+      flashField(container);
+      break;
+    }
+    case 'finn-1-s2': {
+      const container = document.getElementById('nonneg-tag-input');
+      const textInput = document.getElementById('nonneg-text-input');
+      const items = ['Bright natural lighting', 'Product clearly visible', 'No competitor products in frame', 'Show full routine'];
+      const existing = [...container.querySelectorAll('.tag')].map(t => t.textContent.replace('×','').trim());
+      items.forEach(item => { if (!existing.includes(item)) addRegularTag(container, textInput, item); });
+      flashField(container);
+      addFieldWatcher('finn-1-s2', 1, () => {
+        new MutationObserver(() => {
+          if (container.querySelectorAll('.tag').length === 0) unresolve('finn-1-s2', 1);
+        }).observe(container, { childList: true });
+      });
+      break;
+    }
+    case 'finn-2-s0': {
+      const deadlineInput = document.getElementById('deadline-applications-input');
+      const d = new Date();
+      d.setDate(d.getDate() + 3);
+      deadlineInput.value = d.toISOString().split('T')[0];
+      flashField(deadlineInput);
+      addFieldWatcher('finn-2-s0', 2, () => deadlineInput.addEventListener('change', () => unresolve('finn-2-s0', 2)));
+      break;
+    }
+    case 'finn-2-s1': {
+      const compInput = document.getElementById('compensation-amount-input');
+      compInput.value = '500';
+      flashField(compInput);
+      addFieldWatcher('finn-2-s1', 2, () => compInput.addEventListener('input', () => unresolve('finn-2-s1', 2)));
+      break;
+    }
+    case 'finn-3-s0': {
+      const toggle  = document.getElementById('creator-insights-toggle');
+      const section = document.getElementById('creator-insights-questions');
+      toggle.checked = true;
+      section.classList.add('visible', 'slide-in');
+      const card = document.getElementById('card-creator-insights');
+      flashField(card);
+      addFieldWatcher('finn-3-s0', 3, () => toggle.addEventListener('change', () => {
+        if (!toggle.checked) unresolve('finn-3-s0', 3);
+      }));
+      break;
+    }
+  }
+
+  markResolved(id, idx);
+}
+
+/* ─── MARK RESOLVED ───────────────────────────────────────────── */
+function markResolved(id, idx) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  finnState[idx].resolved.add(id);
+  el.classList.add('resolved');
+
+  const icon = document.getElementById(id + '-icon');
+  if (icon) { icon.textContent = '✓'; icon.classList.add('resolved-icon'); }
+
+  const actions = document.getElementById(id + '-actions');
+  if (actions) {
+    const pill = document.createElement('div');
+    pill.className = 'finn-applied-pill';
+    pill.innerHTML = '✓ Applied to brief';
+    actions.replaceWith(pill);
+  }
+}
+
+/* ─── DISMISS SUGGESTION ──────────────────────────────────────── */
+function dismissSuggestion(id) {
+  const parts = id.split('-');
+  const idx   = parseInt(parts[1]);
+  finnState[idx].dismissed.add(id);
+  const el = document.getElementById(id);
+  el.style.transition = 'opacity .25s, max-height .35s ease, margin .3s, padding .3s';
+  el.style.opacity = '0';
+  setTimeout(() => {
+    el.style.maxHeight = '0';
+    el.style.margin = '0';
+    el.style.padding = '0';
+    el.style.overflow = 'hidden';
+    el.classList.remove('visible');
+  }, 250);
+}
+
+/* ─── UN-RESOLVE ──────────────────────────────────────────────── */
+function unresolve(id, idx) {
+  const state = finnState[idx];
+  if (!state.resolved.has(id)) return;
+  state.resolved.delete(id);
+
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('resolved');
+
+  const icon = document.getElementById(id + '-icon');
+  if (icon) { icon.textContent = '⚠'; icon.classList.remove('resolved-icon'); }
+
+  const pill = el.querySelector('.finn-applied-pill');
+  if (pill) {
+    const label = SUGGESTION_LABELS[id] || '✦ Apply suggestion';
+    const actions = document.createElement('div');
+    actions.className = 'finn-isug-actions';
+    actions.id = id + '-actions';
+    actions.innerHTML = `<button class="sug-apply" onclick="applySuggestion('${id}')">${label}</button><button class="sug-dismiss" onclick="dismissSuggestion('${id}')">Dismiss</button>`;
+    pill.replaceWith(actions);
+  }
+}
+
+/* ─── ADD FIELD WATCHER ───────────────────────────────────────── */
+function addFieldWatcher(id, idx, setupFn) {
+  if (appliedWatchers.has(id)) return;
+  appliedWatchers.add(id);
+  setupFn();
+}
+
+/* ─── REMOVE TAG ──────────────────────────────────────────────── */
+function removeTag(btn) {
+  const tag       = btn.closest('.tag');
+  const container = tag.closest('.tag-input');
+  const isFinn    = tag.classList.contains('tag-finn');
+  tag.remove();
+  if (isFinn && container.querySelectorAll('.tag-finn').length === 0) {
+    if (container.id === 'hashtag-tag-input')  unresolve('finn-1-s0', 1);
+    if (container.id === 'mentions-tag-input') unresolve('finn-1-s1', 1);
+  }
+}
+
+/* ─── HELPERS ─────────────────────────────────────────────────── */
+function flashField(el) {
+  el.classList.remove('field-applied');
+  void el.offsetWidth;
+  el.classList.add('field-applied');
+  el.addEventListener('animationend', () => el.classList.remove('field-applied'), { once: true });
+}
+
+function addTag(container, textInput, tagText) {
+  const span = document.createElement('span');
+  span.className = 'tag tag-finn tag-new';
+  span.innerHTML = `${tagText}<button onclick="removeTag(this)" style="background:none;border:none;cursor:pointer;font-size:11px;color:#1a7a40;margin-left:4px;padding:0;line-height:1" title="Remove">×</button>`;
+  container.insertBefore(span, textInput);
+}
+
+function addRegularTag(container, textInput, tagText) {
+  const span = document.createElement('span');
+  span.className = 'tag tag-new';
+  span.innerHTML = `${tagText}<button onclick="this.closest('.tag').remove()" style="background:none;border:none;cursor:pointer;font-size:11px;color:#4a4ea2;margin-left:4px;padding:0;line-height:1" title="Remove">×</button>`;
+  container.insertBefore(span, textInput);
+}
+
+function setupTagInput(containerId, textInputId, prefix) {
+  const container = document.getElementById(containerId);
+  const textInput = document.getElementById(textInputId);
+  if (!container || !textInput) return;
+  textInput.addEventListener('keydown', function(e) {
+    if (e.key !== ',' && e.key !== 'Enter') return;
+    e.preventDefault();
+    const raw = this.value.trim().replace(/,$/, '');
+    if (!raw) return;
+    const val = (prefix && !raw.startsWith(prefix)) ? prefix + raw : raw;
+    addRegularTag(container, textInput, val);
+    this.value = '';
+  });
+  container.addEventListener('click', () => textInput.focus());
+}
+
+function toggleInsightsSection(checkbox) {
+  const section = document.getElementById('creator-insights-questions');
+  if (checkbox.checked) section.classList.add('visible', 'slide-in');
+  else section.classList.remove('visible', 'slide-in');
+}
+
+function selectCard(el) {
+  el.parentElement.querySelectorAll('.radio-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function selPlatform(el) {
+  el.parentElement.querySelectorAll('.platform-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+function selSeg(el) {
+  el.parentElement.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+function counter(btn, dir) {
+  const input = btn.parentElement.querySelector('.counter-val');
+  input.value = Math.max(0, (parseInt(input.value) || 0) + dir);
+}
+
+/* ─── PASSWORD GATE ───────────────────────────────────────────── */
+function checkPw() {
+  const input = document.getElementById('pw-input');
+  const err   = document.getElementById('pw-err');
+  if (input.value === 'SaaSmagedon') {
+    document.getElementById('pw-gate').classList.add('hidden');
+    input.value = '';
+  } else {
+    input.classList.add('error');
+    err.style.display = 'block';
+    input.addEventListener('animationend', () => input.classList.remove('error'), { once: true });
+    input.select();
+  }
+}
+
+/* ─── AUTO-SAVE ───────────────────────────────────────────────── */
+let saveTimer = null;
+function triggerSave() {
+  const status = document.getElementById('save-status');
+  const label  = document.getElementById('save-label');
+  status.classList.add('saving');
+  label.textContent = 'Saving…';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    status.classList.remove('saving');
+    label.textContent = 'Saved';
+  }, 1500);
+}
+document.addEventListener('input',  triggerSave);
+document.addEventListener('change', triggerSave);
+
+/* ─── INIT ────────────────────────────────────────────────────── */
+render();
+setupTagInput('hashtag-tag-input',  'hashtag-text-input',  '#');
+setupTagInput('mentions-tag-input', 'mentions-text-input', '@');
+setupTagInput('nonneg-tag-input',   'nonneg-text-input',   '');
+setupFinnAutoTriggers();
+</script>
+</body>
+</html>
