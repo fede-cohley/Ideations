@@ -349,10 +349,25 @@
             <span class="finn-isug-field">Explain how to use the product(s)</span>
             <button class="finn-isug-dismiss-x" onclick="dismissSuggestion('finn-0-s0')" title="Dismiss">✕</button>
           </div>
-          <div class="finn-isug-body">Creators are receiving 5 products but no instructions are provided on how to best use them together. Adding usage guidance will improve content quality significantly.</div>
+          <div class="finn-isug-body">Creators are receiving 5 products but no usage instructions have been provided. Adding guidance will significantly improve content quality.</div>
           <div class="finn-isug-actions" id="finn-0-s0-actions">
             <button class="sug-apply" onclick="applySuggestion('finn-0-s0')">✦ Apply suggestion</button>
             <button class="sug-dismiss" onclick="dismissSuggestion('finn-0-s0')">Dismiss</button>
+          </div>
+        </div>
+        <!-- FINN INLINE: product usage – too brief -->
+        <div class="finn-inline-sug" id="finn-0-s1">
+          <div class="finn-isug-header">
+            <span class="finn-isug-spark">✦</span>
+            <span class="finn-isug-label">FINN</span>
+            <span class="finn-isug-icon" id="finn-0-s1-icon">⚠</span>
+            <span class="finn-isug-field">How to use the product</span>
+            <button class="finn-isug-dismiss-x" onclick="dismissSuggestion('finn-0-s1')" title="Dismiss">✕</button>
+          </div>
+          <div class="finn-isug-body">Instructions look brief. Creators need step-by-step guidance — include individual steps, key features, correct pronunciation, and any usage tips to get the best content.</div>
+          <div class="finn-isug-actions" id="finn-0-s1-actions">
+            <button class="sug-apply" onclick="applySuggestion('finn-0-s1')">✦ Expand instructions</button>
+            <button class="sug-dismiss" onclick="dismissSuggestion('finn-0-s1')">Dismiss</button>
           </div>
         </div>
       </div>
@@ -737,7 +752,7 @@ const STEPS = [
 ];
 
 const finnState = {
-  0: { resolved: new Set(), dismissed: new Set(), suggestions: ['finn-0-s0'] },
+  0: { resolved: new Set(), dismissed: new Set(), suggestions: ['finn-0-s0', 'finn-0-s1'] },
   1: { resolved: new Set(), dismissed: new Set(), suggestions: ['finn-1-s0', 'finn-1-s1', 'finn-1-s2'] },
   2: { resolved: new Set(), dismissed: new Set(), suggestions: ['finn-2-s0', 'finn-2-s1'] },
   3: { resolved: new Set(), dismissed: new Set(), suggestions: ['finn-3-s0'] },
@@ -745,6 +760,7 @@ const finnState = {
 
 const SUGGESTION_LABELS = {
   'finn-0-s0': '✦ Apply suggestion',
+  'finn-0-s1': '✦ Expand instructions',
   'finn-1-s0': '✦ Apply suggestion',
   'finn-1-s1': '✦ Apply suggestion',
   'finn-2-s0': '✦ Extend to 3 days',
@@ -800,13 +816,17 @@ function prevStep() { if (currentStep > 0) { currentStep--; render(); onStepEnte
 /* ─── ON STEP ENTER ───────────────────────────────────────────── */
 // Step 3 (Creator Targeting) has a proactive suggestion — show it
 // automatically after a short delay, like Finn noticing no questions yet.
-let _step3Timer = null;
+let _stepTimer = null;
 function onStepEnter(idx) {
-  if (idx === 3) {
-    clearTimeout(_step3Timer);
-    _step3Timer = setTimeout(() => showFinnSug('finn-3-s0'), 1800);
-  } else {
-    clearTimeout(_step3Timer);
+  clearTimeout(_stepTimer);
+  if (idx === 0) {
+    // Proactively flag empty product usage after a short delay
+    _stepTimer = setTimeout(() => {
+      const ta = document.getElementById('product-usage-textarea');
+      if (ta && !ta.value.trim()) showFinnSug('finn-0-s0');
+    }, 1800);
+  } else if (idx === 3) {
+    _stepTimer = setTimeout(() => showFinnSug('finn-3-s0'), 1800);
   }
 }
 
@@ -832,15 +852,24 @@ function debounce(fn, ms) {
 function setupFinnAutoTriggers() {
 
   // ── Step 0: Products ─────────────────────────────────────────
-  // Product usage textarea: suggest if left blank on blur
+  // Product usage: 3-state check — empty / too brief / sufficient
   const productUsageTa = document.getElementById('product-usage-textarea');
   if (productUsageTa) {
-    productUsageTa.addEventListener('blur', () => {
-      if (!productUsageTa.value.trim()) showFinnSug('finn-0-s0');
-    });
-    productUsageTa.addEventListener('input', () => {
-      if (productUsageTa.value.trim()) hideFinnSug('finn-0-s0');
-    });
+    const checkUsage = () => {
+      const len = productUsageTa.value.trim().length;
+      if (len === 0) {
+        hideFinnSug('finn-0-s1');
+        showFinnSug('finn-0-s0');
+      } else if (len < 80) {
+        hideFinnSug('finn-0-s0');
+        showFinnSug('finn-0-s1');
+      } else {
+        hideFinnSug('finn-0-s0');
+        hideFinnSug('finn-0-s1');
+      }
+    };
+    productUsageTa.addEventListener('blur', checkUsage);
+    productUsageTa.addEventListener('input', debounce(checkUsage, 600));
   }
 
   // ── Step 1: Deliverables ─────────────────────────────────────
@@ -912,7 +941,16 @@ function applySuggestion(id) {
       const ta = document.getElementById('product-usage-textarea');
       ta.value = 'Start with the Daily Cleanser (Step 1), followed by the Hydrating Toner (Step 2). Apply the Vitamin C Serum (Step 3) to damp skin, then moisturise with the Repair Cream (Step 4). Finish with the SPF 50 Sunscreen (Step 5) every morning. Products work best when layered within 60 seconds on damp skin. Avoid mixing Step 3 with Step 4 at night — use the Repair Cream alone for best overnight results.';
       flashField(ta);
+      hideFinnSug('finn-0-s1');
       addFieldWatcher('finn-0-s0', 0, () => ta.addEventListener('input', () => unresolve('finn-0-s0', 0)));
+      break;
+    }
+    case 'finn-0-s1': {
+      const ta = document.getElementById('product-usage-textarea');
+      ta.value = 'Start with the Daily Cleanser (Step 1), followed by the Hydrating Toner (Step 2). Apply the Vitamin C Serum (Step 3) to damp skin, then moisturise with the Repair Cream (Step 4). Finish with the SPF 50 Sunscreen (Step 5) every morning. Products work best when layered within 60 seconds on damp skin. Avoid mixing Step 3 with Step 4 at night — use the Repair Cream alone for best overnight results.';
+      flashField(ta);
+      hideFinnSug('finn-0-s0');
+      addFieldWatcher('finn-0-s1', 0, () => ta.addEventListener('input', () => unresolve('finn-0-s1', 0)));
       break;
     }
     case 'finn-1-s0': {
@@ -1156,6 +1194,7 @@ setupTagInput('hashtag-tag-input',  'hashtag-text-input',  '#');
 setupTagInput('mentions-tag-input', 'mentions-text-input', '@');
 setupTagInput('nonneg-tag-input',   'nonneg-text-input',   '');
 setupFinnAutoTriggers();
+onStepEnter(0); // trigger proactive check on initial step
 </script>
 </body>
 </html>
