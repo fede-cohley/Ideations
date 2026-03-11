@@ -819,13 +819,7 @@ function prevStep() { if (currentStep > 0) { currentStep--; render(); onStepEnte
 let _stepTimer = null;
 function onStepEnter(idx) {
   clearTimeout(_stepTimer);
-  if (idx === 0) {
-    // Proactively flag empty product usage after a short delay
-    _stepTimer = setTimeout(() => {
-      const ta = document.getElementById('product-usage-textarea');
-      if (ta && !ta.value.trim()) showFinnSug('finn-0-s0');
-    }, 1800);
-  } else if (idx === 3) {
+  if (idx === 3) {
     _stepTimer = setTimeout(() => showFinnSug('finn-3-s0'), 1800);
   }
 }
@@ -1194,7 +1188,6 @@ setupTagInput('hashtag-tag-input',  'hashtag-text-input',  '#');
 setupTagInput('mentions-tag-input', 'mentions-text-input', '@');
 setupTagInput('nonneg-tag-input',   'nonneg-text-input',   '');
 setupFinnAutoTriggers();
-onStepEnter(0); // trigger proactive check on initial step
 </script>
 </body>
 </html>
